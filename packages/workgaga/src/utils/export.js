@@ -1,0 +1,227 @@
+/**
+ * Copyright (C) 2021 Tencent.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import html2canvas from 'html2canvas';
+
+/**
+ * 将预览区域的内容放在body上准备后续导出操作
+ * @param {HTMLElement} previewDom 预览区域的dom
+ * @param {function} cb 准备好导出后开始执行导出操作
+ */
+const getReadyToExport = (previewDom, cb) => {
+  const cherryPreviewer = /** @type {HTMLElement}*/ (previewDom.cloneNode(true));
+  // 当预览区被隐藏时，cherryPreviewer会有cherry-previewer--hidden类，此行用于恢复预览区
+  cherryPreviewer.className = cherryPreviewer.className.replace('cherry-previewer--hidden', '');
+
+  cherryPreviewer.style.width = '100%';
+  cherryPreviewer.style.height = 'auto';
+  cherryPreviewer.style.maxHeight = 'none';
+
+  const mmls = cherryPreviewer.querySelectorAll('mjx-assistive-mml');
+  // a fix for html2canvas
+  mmls.forEach((e) => {
+    if (e instanceof HTMLElement) e.style.setProperty('visibility', 'hidden');
+  });
+
+  const cherryWrapper = document.createElement('div');
+  cherryWrapper.className = 'cherry-export-wrapper';
+
+  // 复制主题相关的类名，确保CSS变量能够正确应用
+  const cherryInstance = previewDom.closest('.cherry');
+  if (cherryInstance) {
+    cherryWrapper.className = `${cherryWrapper.className} ${cherryInstance.className}`;
+  }
+
+  cherryWrapper.appendChild(cherryPreviewer);
+  document.body.appendChild(cherryWrapper);
+
+  const bodyOverflow = document.body.style.overflow;
+  document.body.style.overflow = 'visible';
+  cb(cherryPreviewer, () => {
+    cherryWrapper.remove();
+    document.body.style.overflow = bodyOverflow;
+  });
+};
+
+/**
+ * 下载文件
+ * @param {String} downloadUrl 图片本地地址
+ * @param {String} fileName 导出图片文件名（包含后缀）
+ */
+const fileDownload = (downloadUrl, fileName) => {
+  const aLink = document.createElement('a');
+  aLink.style.display = 'none';
+  aLink.href = downloadUrl;
+  aLink.download = fileName;
+  document.body.appendChild(aLink);
+  aLink.click();
+  document.body.removeChild(aLink);
+};
+
+/**
+ * 利用window.print导出成PDF
+ * @param {HTMLElement} previewDom 预览区域的dom
+ * @param {String} fileName 导出PDF文件名
+ */
+export function exportPDF(previewDom, fileName) {
+  const oldTitle = document.title;
+  document.title = fileName;
+
+  getReadyToExport(previewDom, (/** @type {HTMLElement}*/ cherryPreviewer, /** @type {function}*/ thenFinish) => {
+    // 开启导出专用样式开关，仅在导出流程中生效，避免常规打印误隐藏整页
+    const htmlEl = document.documentElement;
+    const hadExportOnly = htmlEl.classList.contains('cherry-export-only');
+    if (!hadExportOnly) htmlEl.classList.add('cherry-export-only');
+    // 强制展开所有代码块
+    cherryPreviewer.innerHTML = cherryPreviewer.innerHTML.replace(
+      /class="cherry-code-unExpand("| )/g,
+      'class="cherry-code-expand$1',
+    );
+    try {
+      window.print();
+    } finally {
+      thenFinish();
+      // 还原打印专用样式开关
+      if (!hadExportOnly) htmlEl.classList.remove('cherry-export-only');
+      document.title = oldTitle;
+    }
+  });
+}
+
+/**
+ * 利用canvas将html内容导出成图片
+ * @param {HTMLElement} previewDom 预览区域的dom
+ * @param {String} fileName 导出图片文件名
+ */
+export function exportScreenShot(previewDom, fileName) {
+  getReadyToExport(previewDom, (/** @type {HTMLElement}*/ cherryPreviewer, /** @type {function}*/ thenFinish) => {
+    window.scrollTo(0, 0);
+    // 去掉audio和video标签
+    cherryPreviewer.innerHTML = cherryPreviewer.innerHTML.replace(/<audio [^>]+?>([^\n]*?)<\/audio>/g, '$1');
+    cherryPreviewer.innerHTML = cherryPreviewer.innerHTML.replace(/<video [^>]+?>([^\n]*?)<\/video>/g, '$1');
+    // 强制展开所有代码块
+    cherryPreviewer.innerHTML = cherryPreviewer.innerHTML.replace(
+      /class="cherry-code-unExpand("| )/g,
+      'class="cherry-code-expand$1',
+    );
+    html2canvas(cherryPreviewer, {
+      allowTaint: true,
+      height: cherryPreviewer.clientHeight,
+      width: cherryPreviewer.clientWidth,
+      scrollY: 0,
+      scrollX: 0,
+      logging: false,
+      ignoreElements: (element) => {
+        if (cherryPreviewer === element || cherryPreviewer.contains(element) || element.contains(cherryPreviewer)) {
+          return false;
+        }
+        const tagName = element.tagName?.toUpperCase();
+        if (tagName === 'HEAD' || tagName === 'STYLE' || tagName === 'LINK' || tagName === 'META') {
+          return false;
+        }
+        if (element.querySelector && element.querySelector('style, link')) {
+          return false;
+        }
+        return true;
+      },
+    }).then((canvas) => {
+      const imgData = canvas.toDataURL('image/png');
+      fileDownload(imgData, `${fileName}.png`);
+      thenFinish();
+    });
+  });
+}
+
+/**
+ * 利用canvas将dom节点导出成图片
+ * @param {HTMLElement} dom 目标dom节点
+ * @param {String} fileName 导出图片文件名
+ * @param {Object} options 导出选项
+ */
+export function canvas2img(dom, fileName, options = {}) {
+  // 如果是png格式，则使用透明背景。反之获取dom所属的.cherry-previewer的背景色
+  const previewer = dom.closest('.cherry-previewer');
+  const { format = 'png' } = options;
+  const bg = format === 'png' ? 'transparent' : getComputedStyle(previewer).backgroundColor;
+  const mimeType = format === 'jpg' ? 'image/jpeg' : 'image/png';
+  html2canvas(dom, {
+    allowTaint: true,
+    backgroundColor: bg,
+    height: dom.clientHeight + 10,
+    width: dom.clientWidth + 10,
+    x: -5,
+    y: -5,
+    logging: false,
+    ignoreElements: (element) => {
+      // 保留目标节点及其子节点
+      if (dom === element || dom.contains(element)) {
+        return false;
+      }
+      // 保留目标节点的祖先节点（用于继承样式）
+      if (element.contains(dom)) {
+        return false;
+      }
+      const tagName = element.tagName?.toUpperCase();
+      // 保留 head 及其内部的样式表
+      if (tagName === 'HEAD' || tagName === 'STYLE' || tagName === 'LINK' || tagName === 'META') {
+        return false;
+      }
+      // 如果该节点内部包含 style 或 link 标签，也需要保留，以防丢失样式
+      if (element.querySelector && element.querySelector('style, link')) {
+        return false;
+      }
+      // 忽略其他所有节点，极大提升性能
+      return true;
+    },
+  }).then((canvas) => {
+    const imgData = canvas.toDataURL(mimeType);
+    fileDownload(imgData, `${fileName}.${format}`);
+  });
+}
+
+/**
+ * 导出 markdown 文件
+ * @param {String} markdownText markdown文本
+ * @param {String} fileName 导出markdown文件名
+ */
+export function exportMarkdownFile(markdownText, fileName) {
+  const blob = new Blob([markdownText], { type: 'text/markdown;charset=utf-8' });
+  const aLink = document.createElement('a');
+  aLink.style.display = 'none';
+  aLink.href = URL.createObjectURL(blob);
+  aLink.download = `${fileName}.md`;
+  document.body.appendChild(aLink);
+  aLink.click();
+  document.body.removeChild(aLink);
+}
+
+/**
+ * 导出预览区 HTML 文件
+ * @param {String} HTMLText HTML文本
+ * @param {String} fileName 导出HTML文件名
+ */
+export function exportHTMLFile(HTMLText, fileName) {
+  const blob = new Blob([HTMLText], { type: 'text/markdown;charset=utf-8' });
+  const aLink = document.createElement('a');
+  aLink.style.display = 'none';
+  aLink.href = URL.createObjectURL(blob);
+  aLink.download = `${fileName}.html`;
+  document.body.appendChild(aLink);
+  aLink.click();
+  document.body.removeChild(aLink);
+}
+
+// Word 导出功能
+export { exportWordFile } from './exportWord';

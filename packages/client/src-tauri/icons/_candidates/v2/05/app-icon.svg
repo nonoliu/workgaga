@@ -1,0 +1,46 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 512) rotate(90) scale(680)">
+      <stop offset="0" stop-color="#07081F"/>
+      <stop offset="0.62" stop-color="#03040F"/>
+      <stop offset="1" stop-color="#010108"/>
+    </radialGradient>
+    <linearGradient id="disk" x1="140" y1="512" x2="884" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#BFA8FF" stop-opacity="0"/>
+      <stop offset="0.25" stop-color="#BFA8FF" stop-opacity="0.85"/>
+      <stop offset="0.5" stop-color="#7C5CFF" stop-opacity="1"/>
+      <stop offset="0.78" stop-color="#F2C1FF" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#F2C1FF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="halo" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="34" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.45 0" result="g"/>
+      <feMerge>
+        <feMergeNode in="g"/>
+      </feMerge>
+    </filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.55 0" result="g"/>
+      <feMerge>
+        <feMergeNode in="g"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <g opacity="0.55" filter="url(#halo)">
+    <ellipse cx="512" cy="512" rx="480" ry="270" stroke="#3B2B8F" stroke-width="26"/>
+  </g>
+
+  <g filter="url(#glow)">
+    <circle cx="512" cy="512" r="278" fill="#000007"/>
+    <circle cx="512" cy="512" r="296" stroke="#9F86FF" stroke-opacity="0.75" stroke-width="16"/>
+    <circle cx="512" cy="512" r="330" stroke="#E2B7FF" stroke-opacity="0.22" stroke-width="10"/>
+    <path d="M176 512H848" stroke="url(#disk)" stroke-width="28" stroke-linecap="round"/>
+    <path d="M336 462C402 404 622 404 688 462" stroke="#BFA8FF" stroke-opacity="0.32" stroke-width="10" stroke-linecap="round"/>
+    <path d="M336 562C402 620 622 620 688 562" stroke="#E2B7FF" stroke-opacity="0.28" stroke-width="10" stroke-linecap="round"/>
+  </g>
+</svg>

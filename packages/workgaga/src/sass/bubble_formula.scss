@@ -1,0 +1,214 @@
+.cherry-insert-formula-wrappler {
+  // 覆盖默认.cherry-dropdown样式
+  width: 680px !important;
+  height: 420px !important;
+  padding: 0 !important;
+  display: flex;
+  position: fixed !important;
+  box-sizing: border-box;
+  overflow: hidden;
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .cherry-formula-nav {
+    width: 120px;
+    flex-shrink: 0;
+    padding: 8px;
+    border-right: 1px solid var(--base-border-color);
+    position: relative;
+
+    .cherry-formula-main-tabs {
+      .cherry-formula-main-tab {
+        padding: 10px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--base-font-color);
+        user-select: none;
+        transition: background-color 0.2s ease, color 0.2s ease;
+
+        &:not(:last-child) {
+          margin-bottom: 4px;
+        }
+
+        &.active {
+          background-color: var(--dropdown-item-active-bg);
+          color: var(--dropdown-item-active-color);
+        }
+
+        &:hover {
+          background-color: var(--dropdown-item-hover-bg);
+          color: var(--dropdown-item-hover-color);
+        }
+      }
+    }
+
+    .cherry-insert-formula-more {
+      position: absolute;
+      bottom: 8px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 12px;
+      color: var(--editor-comment-color);
+      white-space: nowrap;
+
+      a {
+        color: var(--primary-color);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+    }
+  }
+
+  .cherry-formula-content-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .cherry-formula-content {
+    display: none;
+    flex-direction: column;
+    height: 100%;
+
+    &.active {
+      display: flex;
+    }
+  }
+
+  .cherry-formula-sub-nav {
+    padding: 8px 12px;
+    flex-shrink: 0;
+
+    .cherry-formula-sub-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+
+      .cherry-formula-sub-tab {
+        padding: 6px 12px;
+        border-radius: 16px;
+        cursor: pointer;
+        font-size: 13px;
+        color: var(--base-font-color);
+        user-select: none;
+        transition: background-color 0.2s ease, color 0.2s ease;
+
+        &.active {
+          background-color: var(--dropdown-item-active-bg);
+          color: var(--dropdown-item-active-color);
+        }
+
+        &:hover {
+          background-color: var(--dropdown-item-hover-bg);
+          color: var(--dropdown-item-hover-color);
+        }
+      }
+    }
+  }
+
+  .cherry-formula-grid-wrapper {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 16px;
+  }
+
+  .cherry-formula-grid {
+    display: none;
+
+    &.active {
+      display: block;
+    }
+  }
+
+  .cherry-formula-grid-group {
+    &:not(:last-child) {
+      margin-bottom: 20px;
+    }
+  }
+
+  .cherry-formula-grid-group-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--base-font-color);
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--base-border-color);
+  }
+
+  .cherry-formula-grid-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  // Base styles for all items
+  .cherry-formula-item {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--oc-gray-4);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    background-color: var(--base-editor-bg);
+
+    &:hover {
+      background-color: var(--dropdown-item-hover-bg);
+      color: var(--dropdown-item-hover-color);
+    }
+
+    svg,
+    img {
+      pointer-events: none;
+    }
+  }
+
+  // "快捷工具"：这边主要是符号一些比较小的 item
+  // 等高，自动换行
+  .cherry-formula-item-light {
+    min-height: 32px;
+    width: auto;
+    padding: 0 12px;
+    justify-content: center;
+
+    svg,
+    img {
+      width: auto;
+    }
+  }
+
+  // "公式模板"：这边主要是一些较大的公式
+  // 每行一个
+  .cherry-formula-item-large {
+    width: 100%;
+    height: auto;
+    min-height: 48px;
+    padding: 10px 12px;
+    justify-content: center;
+
+    svg,
+    img {
+      height: auto;
+      width: auto;
+      max-width: 100%;
+    }
+  }
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

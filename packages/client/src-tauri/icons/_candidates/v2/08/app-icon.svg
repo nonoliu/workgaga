@@ -1,0 +1,44 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 512) rotate(90) scale(680)">
+      <stop offset="0" stop-color="#0B0C30"/>
+      <stop offset="0.6" stop-color="#050615"/>
+      <stop offset="1" stop-color="#010109"/>
+    </radialGradient>
+    <linearGradient id="plasma" x1="240" y1="420" x2="790" y2="620" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6E4DFF"/>
+      <stop offset="0.5" stop-color="#BFA8FF"/>
+      <stop offset="1" stop-color="#F2C1FF"/>
+    </linearGradient>
+    <linearGradient id="disk" x1="120" y1="512" x2="904" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B18CFF" stop-opacity="0"/>
+      <stop offset="0.2" stop-color="#B18CFF" stop-opacity="0.95"/>
+      <stop offset="0.5" stop-color="#7C5CFF" stop-opacity="1"/>
+      <stop offset="0.78" stop-color="#F2C1FF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#F2C1FF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="16" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.7 0" result="g"/>
+      <feMerge>
+        <feMergeNode in="g"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <g filter="url(#glow)">
+    <circle cx="512" cy="512" r="220" fill="#02020A"/>
+    <circle cx="512" cy="512" r="252" stroke="#BFA8FF" stroke-opacity="0.55" stroke-width="40"/>
+    <circle cx="512" cy="512" r="196" stroke="#6E4DFF" stroke-opacity="0.5" stroke-width="10"/>
+
+    <path d="M228 486C312 392 450 350 558 372C674 396 738 496 704 586C670 678 548 722 432 694C322 668 244 596 248 512C250 456 300 414 354 402" stroke="url(#plasma)" stroke-width="26" stroke-linecap="round" fill="none" opacity="0.75"/>
+    <path d="M308 444C368 392 478 368 568 388C654 406 704 468 690 544C676 620 586 662 494 648C412 636 346 588 350 526" stroke="#F2C1FF" stroke-opacity="0.4" stroke-width="14" stroke-linecap="round" fill="none"/>
+
+    <path d="M152 512H872" stroke="url(#disk)" stroke-width="48" stroke-linecap="round"/>
+    <path d="M296 416C372 346 652 346 728 416" stroke="#BFA8FF" stroke-opacity="0.5" stroke-width="14" stroke-linecap="round"/>
+    <path d="M296 608C372 678 652 678 728 608" stroke="#E2B7FF" stroke-opacity="0.42" stroke-width="14" stroke-linecap="round"/>
+  </g>
+</svg>

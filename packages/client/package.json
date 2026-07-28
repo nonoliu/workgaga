@@ -1,0 +1,32 @@
+{
+  "name": "@workgaga/client",
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npx node ./scripts/sync-version.js && vite",
+    "build": "npx node ./scripts/sync-version.js && vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "version:sync": "node ./scripts/sync-version.js",
+    "lint": "cd ../.. && npx prettier --check packages/client/src/**/*.{ts,vue} && npx eslint packages/client/src/**/*.{ts,vue}",
+    "lint:fix": "cd ../.. && npx prettier --write packages/client/src/**/*.{ts,vue} && npx eslint packages/client/src/**/*.{ts,vue} --fix"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.11.1",
+    "@tauri-apps/plugin-dialog": "2.7.1",
+    "@tauri-apps/plugin-fs": "2.5.1",
+    "@tauri-apps/plugin-global-shortcut": "2.3.2",
+    "@tauri-apps/plugin-http": "2.5.9",
+    "@tauri-apps/plugin-opener": "2.5.4",
+    "echarts": "^6.0.0",
+    "katex": "^0.16.27",
+    "pinia": "^3.0.4",
+    "pinyin": "^4.0.0",
+    "vue": "^3.5.13",
+    "workgaga": "*"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.11.3",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "vue-tsc": "^3.2.2"
+  }
+}

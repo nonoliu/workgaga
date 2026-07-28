@@ -1,0 +1,352 @@
+@use './components/bubble';
+
+.cherry {
+  .doing-resize-img {
+    -moz-user-select:none;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  .cherry-previewer {
+    img {
+      transition: all 0.1s;
+    }
+  }
+  .cherry-previewer-footnote-ref-hover-handler {
+    position: absolute;
+    min-width: 200px;
+    max-width: 500px;
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 11;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    background: var(--base-editor-bg);
+    border: 1px solid var(--base-border-color);
+  }
+  .footnote.hidden {
+    display: none;
+  }
+  .cherry-previewer-img-size-handler {
+    position:absolute;
+    box-shadow: 0 1px 4px 0 rgba(20,81,154, 0.5);
+    border:1px solid var(--primary-color);
+    box-sizing: content-box;
+    pointer-events:none;
+    .cherry-previewer-img-size-handler__points {
+      position: absolute;
+      height: 10px;
+      width: 10px;
+      margin-top: -7px;
+      margin-left: -7px;
+      border-radius: 9px;
+      background: var(--primary-color);
+      border: 2px solid var(--oc-white);
+      box-sizing: content-box;
+      box-shadow: 0px 2px 2px 0px rgba(20,81,154,0.5);
+      pointer-events:all;
+    }
+    .cherry-previewer-img-size-handler__background {
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      opacity: 0.5;
+      width: 100%;
+      height: 100%;
+    }
+    // 左上角
+    .cherry-previewer-img-size-handler__points-leftTop {
+      cursor:nw-resize;
+    }
+    // 右上角
+    .cherry-previewer-img-size-handler__points-rightTop {
+      cursor:sw-resize;
+    }
+    // 左下角
+    .cherry-previewer-img-size-handler__points-leftBottom {
+      cursor:sw-resize;
+    }
+    // 右下角
+    .cherry-previewer-img-size-handler__points-rightBottom {
+      cursor:nw-resize;
+    }
+    // 中上
+    .cherry-previewer-img-size-handler__points-middleTop {
+      cursor:n-resize;
+    }
+    // 中下
+    .cherry-previewer-img-size-handler__points-middleBottom {
+      cursor:n-resize;
+    }
+    // 中左
+    .cherry-previewer-img-size-handler__points-leftMiddle {
+      cursor:e-resize;
+    }
+    // 中右
+    .cherry-previewer-img-size-handler__points-rightMiddle {
+      cursor:e-resize;
+    }
+  }
+  // 复用 bubble 模块的基础盒模型；扩展样式见本选择器内，勿改用 @extend（跨模块不可用）
+  .cherry-previewer-img-tool-handler {
+    @include bubble.cherry-bubble-base;
+    padding: var(--bubble-padding);
+    display: flex;
+    flex-direction: column;
+
+    .img-tool-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .img-tool-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--bubble-btn-height);
+      height: var(--bubble-btn-height);
+      min-width: var(--bubble-btn-height);
+      min-height: var(--bubble-btn-height);
+      color: var(--toolbar-btn-color);
+      background: var(--toolbar-btn-bg);
+      border-radius: var(--bubble-radius);
+      cursor: pointer;
+      user-select: none;
+      font-size: var(--font-size-md);
+      transition: color 150ms, background-color 150ms, border-color 150ms;
+      box-sizing: border-box;
+
+      &.active,
+      &:hover {
+        background-color: var(--toolbar-btn-hover-bg);
+        color: var(--toolbar-btn-hover-color);
+      }
+    }
+
+    .img-tool-divider {
+      width: 100%;
+      margin: var(--border-width-4) 0;
+      height: var(--border-width-1);
+      border-bottom: var(--border-width-1) var(--base-border-color) dashed;
+    }
+
+    .img-tool-icon {
+      font-size: 18px;
+      pointer-events: none;
+      user-select: none;
+    }
+  }
+
+  .cherry-previewer-table-content-handler {
+    .cherry-previewer-table-content-handler__input {
+      position: absolute;
+      textarea {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        box-sizing: border-box;
+        resize: none;
+        outline: 1px solid var(--primary-color);
+        word-break: break-all;
+      }
+    }
+  }
+  .cherry-previewer-codeBlock-content-handler {
+    .cherry-previewer-codeBlock-content-handler__input {
+      position: absolute;
+    }
+  }
+  .cherry-previewer-table-hover-handler {
+    position: absolute;
+    pointer-events: none;    
+
+    &-container, &-menu-container {
+      position: absolute;
+      height: 100%;
+      width: 100%;
+      padding: 0;
+      margin: 0;
+      list-style-type: none;
+    }
+
+    /* 插入行/列的触发符号 */
+    &__symbol {
+      pointer-events: auto;
+      display: flex;
+      justify-content: center;
+      position: absolute;
+      color: var(--md-table-operator-color);
+      width: 12px;
+      height: 12px;
+      line-height: 12px;
+      border: 1px solid rgba(53, 130, 251, 0);
+      background-color: transparent;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.3s;
+      &:hover {
+        background-color: var(--secondary-color);
+      }
+    }
+
+    /* 菜单按钮 */
+    &__menu {
+      pointer-events: auto;
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--md-table-operator-color);
+      width: 25px;
+      height: 14px;
+      font-size: var(--font-size-xs);
+      border: 1px solid var(--md-table-operator-color);
+      border-radius: 999px;
+      background-color: var(--base-previewer-bg);
+      cursor: pointer;
+      transition: all 0.3s;
+      z-index: 1001;
+
+      &:hover {
+        background-color: var(--md-table-operator-color);
+        color: var(--oc-white);
+      }
+        
+      &[data-type='right'],
+      &[data-type='left'] {
+        transform: rotate(90deg);
+      }
+
+      .ch-icon {
+        line-height: 1;
+        vertical-align: baseline;
+      }
+    }
+  }
+
+  /* 表格行/列重排序的高亮线 */
+  .table-highlight-border-reorder {
+    &-left   { border-left: 2px solid var(--md-table-drag-border-bg) !important; }
+    &-right  { border-right: 2px solid var(--md-table-drag-border-bg) !important; }
+    &-top    { border-top: 2px solid var(--md-table-drag-border-bg) !important; }
+    &-bottom { border-bottom: 2px solid var(--md-table-drag-border-bg) !important; }
+  }
+
+  .table-highlight-col,
+  .table-highlight-row {
+    background-color: var(--md-table-sort-active-bg) !important;
+  }
+
+  /* 表格行/列插入边界的高亮线 */
+  .cherry-previewer-table-boundary-trigger-line {
+    position: absolute;
+    pointer-events: none;
+  }
+
+  .cherry-previewer-table-boundary-trigger-line--v {
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 2px solid var(--md-table-operator-color);
+  }
+
+  .cherry-previewer-table-boundary-trigger-line--h {
+    left: 0;
+    right: 0;
+    height: 0;
+    border-top: 2px solid var(--md-table-operator-color);
+  }
+
+  /* 菜单气泡样式 */
+  .cherry-previewer-table-menu-bubble {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    
+    min-height: var(--bubble-btn-height);
+    min-width: var(--bubble-btn-height);
+    
+    border: var(--border-width-1) solid var(--bubble-border);
+    background-color: var(--bubble-bg);
+    box-shadow: var(--bubble-shadow);
+    border-radius: var(--bubble-radius);
+    z-index: var(--bubble-z-index);
+    padding: var(--spacing-xs);
+    gap: 2px;
+    
+    &.cherry-previewer-table-menu-bubble--hidden {
+      display: none;
+    }
+    
+    // 水平排列（列控制）
+    &.cherry-previewer-table-menu-bubble--horizontal {
+      flex-direction: row;
+    }
+    
+    // 垂直排列（行控制）
+    &.cherry-previewer-table-menu-bubble--vertical {
+      flex-direction: column;
+    }
+    
+    .cherry-previewer-table-menu-option {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: var(--bubble-btn-height);
+      height: var(--bubble-btn-height);
+      cursor: pointer;
+      color: var(--base-font-color);
+      font-size: var(--font-size-sm);
+      transition: background-color 0.2s ease, color 0.2s ease;
+      border-radius: calc(var(--bubble-radius) - 2px);
+      
+      &:hover {
+        background-color: var(--toolbar-btn-hover-bg);
+        color: var(--toolbar-btn-hover-color);
+      }
+      
+      .ch-icon {
+        font-size: var(--font-size-sm);
+      }
+    }
+  }
+  
+  .border-highlight {
+    --highlight-color: var(--oc-red-6);
+    --highlight-width: 2px;
+    transition: border-color 0.2s ease;
+    
+    &-top { 
+      border-top: var(--highlight-width) solid var(--highlight-color); 
+    }
+    &-bottom { 
+      border-bottom: var(--highlight-width) solid var(--highlight-color) 
+    }
+    &-left { 
+      border-left: var(--highlight-width) solid var(--highlight-color)
+    }
+    &-right { 
+      border-right: var(--highlight-width) solid var(--highlight-color)
+    }
+  }
+  @keyframes changeBgColor {
+    0% { background-color: #ffffcc88; }
+    60% { background-color: #ffffcc88; }
+    100% { background-color: #ffffcc00; }
+  }
+  @keyframes changeHighlightLineBg {
+    0% {
+      background-color: var(--md-paragraph-highlight-line-bg);
+    }
+    60% {
+      background-color: var(--md-paragraph-highlight-line-bg);
+    }
+    100% {
+      background-color: var(--base-previewer-bg);
+    }
+  }
+  .cherry-highlight-line {
+    animation: changeHighlightLineBg 1s;
+  }
+}
+
+

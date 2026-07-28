@@ -1,0 +1,43 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 512) rotate(90) scale(660)">
+      <stop offset="0" stop-color="#080922"/>
+      <stop offset="0.62" stop-color="#040512"/>
+      <stop offset="1" stop-color="#010108"/>
+    </radialGradient>
+    <linearGradient id="beam" x1="160" y1="512" x2="864" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B18CFF" stop-opacity="0"/>
+      <stop offset="0.22" stop-color="#B18CFF" stop-opacity="0.95"/>
+      <stop offset="0.5" stop-color="#7C5CFF" stop-opacity="1"/>
+      <stop offset="0.78" stop-color="#F2C1FF" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#F2C1FF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="356" y1="340" x2="668" y2="684" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6E4DFF"/>
+      <stop offset="0.65" stop-color="#BFA8FF"/>
+      <stop offset="1" stop-color="#F2C1FF"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="12" result="b"/>
+      <feColorMatrix in="b" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 0.6 0" result="g"/>
+      <feMerge>
+        <feMergeNode in="g"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="220" fill="url(#bg)"/>
+
+  <g filter="url(#glow)">
+    <circle cx="512" cy="512" r="232" fill="#02020A"/>
+    <circle cx="512" cy="512" r="252" stroke="url(#ring)" stroke-width="44"/>
+    <circle cx="512" cy="512" r="188" stroke="url(#ring)" stroke-width="10" opacity="0.55"/>
+    <path d="M176 512H848" stroke="url(#beam)" stroke-width="40" stroke-linecap="round"/>
+
+    <path d="M290 420C372 338 652 338 734 420" stroke="#BFA8FF" stroke-opacity="0.6" stroke-width="18" stroke-linecap="round"/>
+    <path d="M290 604C372 686 652 686 734 604" stroke="#E2B7FF" stroke-opacity="0.5" stroke-width="18" stroke-linecap="round"/>
+
+    <ellipse cx="512" cy="512" rx="458" ry="260" stroke="#3B2B8F" stroke-opacity="0.25" stroke-width="18"/>
+  </g>
+</svg>

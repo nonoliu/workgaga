@@ -1,0 +1,187 @@
+{
+  "name": "workgaga-vscode-plugin",
+  "displayName": "workgaga",
+  "description": "A markdown previewer powered by [workgaga](https://github.com/Tencent/workgaga) for VSCode",
+  "version": "0.3.1",
+  "publisher": "workgagaPublisher",
+  "license": "Apache-2.0",
+  "keywords": [
+    "markdown",
+    "markdown editor",
+    "markdown preview"
+  ],
+  "l10n": "./l10n",
+  "icon": "favicon.ico",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Tencent/workgaga.git"
+  },
+  "homepage": "https://github.com/Tencent/workgaga",
+  "engines": {
+    "vscode": "^1.73.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "workgaga.preview",
+        "title": "%commands.preview.title%"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "workgaga.preview",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "workgaga.preview",
+        "key": "F10",
+        "when": "editorTextFocus && editorLangId == markdown"
+      }
+    ],
+    "icons": {
+      "distro-ubuntu": {
+        "description": "workgaga icon",
+        "default": {
+          "fontPath": "./web-resources/dist/fonts/ch-icon.woff",
+          "fontCharacter": "\\ea28"
+        }
+      }
+    },
+    "configuration": {
+      "title": "workgaga",
+      "properties": {
+        "workgaga.Usage": {
+          "type": "string",
+          "default": "%usage.enum.active%",
+          "enum": [
+            "%usage.enum.active%",
+            "%usage.enum.only-manual%"
+          ],
+          "description": "%usage.description%"
+        },
+        "workgaga.Theme": {
+          "type": "string",
+          "default": "%theme.enum.default%",
+          "enum": [
+            "%theme.enum.default%",
+            "%theme.enum.dark%",
+            "%theme.enum.green%",
+            "%theme.enum.red%"
+          ],
+          "description": "%theme.description%"
+        },
+        "workgaga.UploadType": {
+          "type": "string",
+          "default": "%uploadType.enum.None%",
+          "enum": [
+            "%uploadType.enum.None%",
+            "%uploadType.enum.CustomUploader%",
+            "%uploadType.enum.PicGoServer%"
+          ],
+          "enumDescriptions": [
+            "%uploadType.enumDescriptions.None%",
+            "%uploadType.enumDescriptions.CustomUploader%",
+            "%uploadType.enumDescriptions.PicGoServer%"
+          ],
+          "description": "%uploadType.description%"
+        },
+        "workgaga.CustomUploader": {
+          "type": "object",
+          "default": {
+            "enable": true,
+            "url": "https://your-server.com/upload",
+            "headers": {
+              "Access-Control-Allow-Origin": "*"
+            }
+          },
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": false,
+              "description": "%customUploader.enable.description%"
+            },
+            "url": {
+              "type": "string",
+              "default": "",
+              "description": "%customUploader.url.description%"
+            },
+            "headers": {
+              "type": "object",
+              "default": {},
+              "description": "%customUploader.headers%",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "default": "",
+                  "description": "%customUploader.headers.key.description%"
+                },
+                "value": {
+                  "type": "string",
+                  "default": "",
+                  "description": "%customUploader.headers.value.description%"
+                }
+              }
+            }
+          },
+          "description": "%customUploader.description%"
+        },
+        "workgaga.PicGoServer": {
+          "type": "string",
+          "description": "%picGoServer.description%",
+          "default": "http://127.0.0.1:36677/upload"
+        },
+        "workgaga.BackfillImageProps": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "%backfillImageProps.enum.isBorder%",
+              "%backfillImageProps.enum.isNotBorder%",
+              "%backfillImageProps.enum.isShadow%",
+              "%backfillImageProps.enum.isRadius%"
+            ],
+            "description": "Select multiple items",
+            "enumDescriptions": [
+              "%backfillImageProps.enumDescriptions.isBorder%",
+              "%backfillImageProps.enumDescriptions.isNotBorder%",
+              "%backfillImageProps.enumDescriptions.isShadow%",
+              "%backfillImageProps.enumDescriptions.isRadius%"
+            ]
+          },
+          "default": [],
+          "description": "%backfillImageProps.description%"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "dev": "rspack build --watch",
+    "build": "rspack build --mode production",
+    "package": "yarn build && npx @vscode/vsce package --no-dependencies --no-yarn",
+    "lint": "cd ../.. && npx prettier --check packages/vscodePlugin/src/**/*.ts && npx eslint packages/vscodePlugin/src/**/*.ts",
+    "lint:fix": "cd ../.. && npx prettier --write packages/vscodePlugin/src/**/*.ts && npx eslint packages/vscodePlugin/src/**/*.ts --fix"
+  },
+  "devDependencies": {
+    "@rspack/cli": "^1.5.3",
+    "@rspack/core": "^1.5.3",
+    "@types/vscode": "^1.58.0",
+    "axios": "^1.4.0",
+    "workgaga": "*",
+    "css-loader": "^7.1.4",
+    "html-to-image": "^1.11.11",
+    "mathjax": "^3.2.2"
+  },
+  "dependencies": {}
+}

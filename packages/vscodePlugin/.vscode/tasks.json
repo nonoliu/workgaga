@@ -1,0 +1,35 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build:workgaga",
+      "type": "shell",
+      "command": "test -f ../workgaga/dist/workgaga.min.css && test -f ../workgaga/dist/workgaga.esm.js || yarn workspace workgaga build",
+      "options": {
+        "cwd": "${workspaceFolder}/../.."
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "focus": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "build:extension",
+      "type": "npm",
+      "script": "build",
+      "dependsOn": ["build:workgaga"],
+      "dependsOrder": "sequence",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared"
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}

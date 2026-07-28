@@ -1,0 +1,736 @@
+import Cherry from 'workgaga';
+import { CherryOptions } from 'workgaga/types/cherry';
+import katex from 'katex';
+import html2canvas from 'html2canvas';
+import 'katex/dist/katex.min.css';
+
+import { open } from '@tauri-apps/plugin-dialog';
+import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { pinyin } from 'pinyin';
+import { WINDOW_EVENTS } from '../constants/events';
+import { notifyError, notifySuccess, notifyWarning } from '../utils/notifications';
+
+/**
+ * ECharts优化导入 - 使用命名空间导入替代默认导入
+ * 优点：
+ * 1. 更好的TypeScript类型支持
+ * 2. 避免版本兼容性问题
+ * 3. 支持按需导入echarts功能
+ */
+import * as echarts from 'echarts';
+
+/**
+ * ECharts类型兼容性处理
+ * 由于workgaga可能期望特定版本的echarts类型，
+ * 这里定义兼容性接口确保类型安全
+ */
+interface EChartsInstance {
+  init: (dom: HTMLElement, theme?: string, opts?: any) => any;
+  [key: string]: any;
+}
+
+// 确保echarts实例的类型兼容性
+const echartsInstance: EChartsInstance = echarts as any;
+
+const toPinyin = (text: string) => pinyin(text, { style: pinyin.STYLE_TONE, heteronym: false }).flat().join(' ');
+
+type CustomConfig = {
+  CustomToolbar: {
+    CustomMenuType: {
+      customMenu_fileUpload: any;
+      customSave: any;
+      customEditorExport: any;
+      customViewMode: any;
+    };
+  };
+};
+
+type EditorViewMode = 'editOnly' | 'previewOnly' | 'edit&preview';
+
+const changeEditorViewMode = (mode: EditorViewMode) => {
+  window.dispatchEvent(new CustomEvent(WINDOW_EVENTS.CHANGE_EDITOR_VIEW_MODE, { detail: { mode } }));
+};
+
+const customViewMode = Cherry.createMenuHook('视图模式', {
+  iconName: 'preview',
+  subMenuConfig: [
+    {
+      noIcon: true,
+      name: '仅编辑',
+      onclick: () => changeEditorViewMode('editOnly'),
+    },
+    {
+      noIcon: true,
+      name: '仅预览',
+      onclick: () => changeEditorViewMode('previewOnly'),
+    },
+    {
+      noIcon: true,
+      name: '编辑 + 预览',
+      onclick: () => changeEditorViewMode('edit&preview'),
+    },
+  ],
+  onClick() {
+    this.updateMarkdown = false;
+  },
+});
+
+const customSave = Cherry.createMenuHook('save', {
+  icon: {
+    type: 'svg',
+    iconStyle: 'width:16px;height:16px;',
+    content:
+      '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg"><path d="M5 3.5h8.5l1.5 1.5V16.5H5z" /><path d="M7 3.5v5h6V3.5" /><path d="M7 14.5h6" /></svg>',
+  },
+  onClick() {
+    this.updateMarkdown = false;
+    if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+      const markdown = this.$cherry?.getMarkdown?.() ?? '';
+      const event = new CustomEvent(WINDOW_EVENTS.REQUEST_SAVE, { detail: { markdown } });
+      window.dispatchEvent(event);
+    }
+  },
+});
+
+const textEncoder = new TextEncoder();
+
+const encodeText = (text: string): Uint8Array => textEncoder.encode(text);
+
+const concatBytes = (parts: Uint8Array[]): Uint8Array => {
+  const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  parts.forEach((part) => {
+    result.set(part, offset);
+    offset += part.length;
+  });
+  return result;
+};
+
+const dataUrlToBytes = (dataUrl: string): Uint8Array => {
+  const base64 = dataUrl.split(',')[1] ?? '';
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+};
+
+const createPdfFromJpeg = (imageBytes: Uint8Array, imageWidth: number, imageHeight: number): Uint8Array => {
+  const pageWidth = Math.max(1, Math.round(imageWidth));
+  const pageHeight = Math.max(1, Math.round(imageHeight));
+  const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ\n`;
+  const objects = [
+    encodeText('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'),
+    encodeText('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n'),
+    encodeText(
+      `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`,
+    ),
+    concatBytes([
+      encodeText(
+        `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pageWidth} /Height ${pageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`,
+      ),
+      imageBytes,
+      encodeText('\nendstream\nendobj\n'),
+    ]),
+    encodeText(`5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`),
+  ];
+  const parts: Uint8Array[] = [encodeText('%PDF-1.4\n')];
+  const offsets = objects.map((object) => {
+    const offset = parts.reduce((sum, part) => sum + part.length, 0);
+    parts.push(object);
+    return offset;
+  });
+  const xrefOffset = parts.reduce((sum, part) => sum + part.length, 0);
+  const xref = [`xref\n0 ${offsets.length + 1}\n0000000000 65535 f \n`]
+    .concat(offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`))
+    .join('');
+  parts.push(
+    encodeText(`${xref}trailer\n<< /Size ${offsets.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`),
+  );
+  return concatBytes(parts);
+};
+
+const sanitizeExportName = (name: string): string => name.replace(/[\\/:*?"<>|]/g, '').trim() || 'workgaga-export';
+
+const getExportFileName = (): string => {
+  const heading = document.querySelector('.cherry-previewer h1')?.textContent?.trim();
+  return sanitizeExportName(heading || 'workgaga-export');
+};
+
+const selectExportDirectory = async (): Promise<string | null> => {
+  const selected = await open({ directory: true, multiple: false });
+  if (!selected) return null;
+  return Array.isArray(selected) ? selected[0] : selected;
+};
+
+const joinPath = (directory: string, fileName: string): string => `${directory.replace(/[\\/]$/, '')}/${fileName}`;
+
+const exportProgress = {
+  mask: null as HTMLDivElement | null,
+  bar: null as HTMLDivElement | null,
+  text: null as HTMLDivElement | null,
+  value: 0,
+};
+
+const showExportProgress = (message: string, value: number): void => {
+  exportProgress.value = Math.max(0, Math.min(100, value));
+  if (!exportProgress.mask) {
+    const mask = document.createElement('div');
+    mask.className = 'editor-export-progress-mask';
+    mask.style.position = 'fixed';
+    mask.style.inset = '0';
+    mask.style.zIndex = '99999';
+    mask.style.display = 'flex';
+    mask.style.alignItems = 'center';
+    mask.style.justifyContent = 'center';
+    mask.style.background = 'rgba(15, 23, 42, 0.35)';
+
+    const panel = document.createElement('div');
+    panel.style.width = '360px';
+    panel.style.padding = '22px 24px';
+    panel.style.borderRadius = '12px';
+    panel.style.background = '#ffffff';
+    panel.style.boxShadow = '0 18px 45px rgba(15, 23, 42, 0.22)';
+
+    const title = document.createElement('div');
+    title.textContent = '正在导出';
+    title.style.marginBottom = '12px';
+    title.style.fontSize = '16px';
+    title.style.fontWeight = '600';
+    title.style.color = '#111827';
+
+    const text = document.createElement('div');
+    text.style.marginBottom = '10px';
+    text.style.fontSize = '13px';
+    text.style.color = '#4b5563';
+
+    const track = document.createElement('div');
+    track.style.height = '8px';
+    track.style.overflow = 'hidden';
+    track.style.borderRadius = '999px';
+    track.style.background = '#e5e7eb';
+
+    const bar = document.createElement('div');
+    bar.style.height = '100%';
+    bar.style.width = '0%';
+    bar.style.borderRadius = '999px';
+    bar.style.background = '#2563eb';
+    bar.style.transition = 'width 0.2s ease';
+
+    track.appendChild(bar);
+    panel.append(title, text, track);
+    mask.appendChild(panel);
+    document.body.appendChild(mask);
+    exportProgress.mask = mask;
+    exportProgress.bar = bar;
+    exportProgress.text = text;
+  }
+  if (exportProgress.text) exportProgress.text.textContent = `${message} ${exportProgress.value}%`;
+  if (exportProgress.bar) exportProgress.bar.style.width = `${exportProgress.value}%`;
+};
+
+const hideExportProgress = (): void => {
+  document.querySelectorAll('.editor-export-progress-mask').forEach((mask) => mask.remove());
+  exportProgress.mask = null;
+  exportProgress.bar = null;
+  exportProgress.text = null;
+  exportProgress.value = 0;
+};
+
+const completeExportProgress = (message: string): void => {
+  showExportProgress(message, 100);
+  window.setTimeout(hideExportProgress, 800);
+};
+
+const waitForPaint = (): Promise<void> =>
+  new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+
+hideExportProgress();
+
+const getExportPreviewElement = (): HTMLElement => {
+  const previewer = document.querySelector('.cherry-previewer');
+  if (!(previewer instanceof HTMLElement)) {
+    throw new Error('未找到预览区域');
+  }
+  const clone = previewer.cloneNode(true) as HTMLElement;
+  clone.className = clone.className.replace('cherry-previewer--hidden', '');
+  clone.style.width = `${previewer.clientWidth || 800}px`;
+  clone.style.height = 'auto';
+  clone.style.maxHeight = 'none';
+  clone.style.overflow = 'visible';
+  clone.querySelectorAll('mjx-assistive-mml').forEach((item) => {
+    if (item instanceof HTMLElement) item.style.visibility = 'hidden';
+  });
+  clone.innerHTML = clone.innerHTML.replace(/<audio [^>]+?>([^\n]*?)<\/audio>/g, '$1');
+  clone.innerHTML = clone.innerHTML.replace(/<video [^>]+?>([^\n]*?)<\/video>/g, '$1');
+  clone.innerHTML = clone.innerHTML.replace(/class="cherry-code-unExpand("| )/g, 'class="cherry-code-expand$1');
+  const wrapper = document.createElement('div');
+  wrapper.className = 'cherry-export-wrapper';
+  const cherryInstanceDom = previewer.closest('.cherry');
+  if (cherryInstanceDom) wrapper.className = `${wrapper.className} ${cherryInstanceDom.className}`;
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '-100000px';
+  wrapper.style.top = '0';
+  wrapper.style.width = clone.style.width;
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+  return clone;
+};
+
+const renderExportCanvas = async (): Promise<{ canvas: HTMLCanvasElement; cleanup: () => void }> => {
+  showExportProgress('正在准备预览内容...', 25);
+  await waitForPaint();
+  const element = getExportPreviewElement();
+  const wrapper = element.parentElement;
+  try {
+    showExportProgress('正在生成导出内容...', 45);
+    await waitForPaint();
+    const canvas = await html2canvas(element, {
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      height: element.scrollHeight,
+      width: element.clientWidth,
+      scrollY: 0,
+      scrollX: 0,
+      logging: false,
+    });
+    return { canvas, cleanup: () => wrapper?.remove() };
+  } catch (error) {
+    wrapper?.remove();
+    throw error;
+  }
+};
+
+const exportEditorFile = async (type: 'pdf' | 'screenShot' | 'markdown' | 'html', cherry: any): Promise<void> => {
+  try {
+    const directory = await selectExportDirectory();
+    if (!directory) {
+      hideExportProgress();
+      notifyWarning('已取消导出。');
+      return;
+    }
+    showExportProgress('正在准备导出内容...', 15);
+    const fileName = getExportFileName();
+    if (type === 'markdown') {
+      showExportProgress('正在导出 markdown...', 65);
+      await waitForPaint();
+      await writeTextFile(joinPath(directory, `${fileName}.md`), cherry?.getMarkdown?.() ?? '');
+      completeExportProgress('导出 markdown 成功');
+      notifySuccess('导出 markdown 成功');
+      return;
+    }
+    if (type === 'html') {
+      showExportProgress('正在导出 html...', 65);
+      await waitForPaint();
+      await writeTextFile(joinPath(directory, `${fileName}.html`), cherry?.previewer?.getValue?.() ?? '');
+      completeExportProgress('导出 html 成功');
+      notifySuccess('导出 html 成功');
+      return;
+    }
+    const { canvas, cleanup } = await renderExportCanvas();
+    try {
+      if (type === 'pdf') {
+        showExportProgress('正在生成 PDF...', 72);
+        await waitForPaint();
+        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+        showExportProgress('正在生成 PDF 文件...', 82);
+        await waitForPaint();
+        const pdfBytes = createPdfFromJpeg(dataUrlToBytes(jpegDataUrl), canvas.width, canvas.height);
+        showExportProgress('正在写入 PDF 文件...', 92);
+        await waitForPaint();
+        await writeFile(joinPath(directory, `${fileName}.pdf`), pdfBytes);
+        completeExportProgress('导出 PDF 成功');
+        notifySuccess('导出 PDF 成功');
+        return;
+      }
+      showExportProgress('正在生成长图...', 75);
+      await waitForPaint();
+      await writeFile(joinPath(directory, `${fileName}.png`), dataUrlToBytes(canvas.toDataURL('image/png')));
+      completeExportProgress('导出长图成功');
+      notifySuccess('导出长图成功');
+    } finally {
+      cleanup();
+    }
+  } catch (error) {
+    hideExportProgress();
+    notifyError(`导出失败: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+const customEditorExport = Cherry.createMenuHook('导出', {
+  iconName: 'export',
+  subMenuConfig: [
+    {
+      noIcon: true,
+      name: '导出PDF',
+      onclick(this: any) {
+        return exportEditorFile('pdf', this.$cherry);
+      },
+    },
+    {
+      noIcon: true,
+      name: '导出长图',
+      onclick(this: any) {
+        return exportEditorFile('screenShot', this.$cherry);
+      },
+    },
+    {
+      noIcon: true,
+      name: '导出markdown',
+      onclick(this: any) {
+        return exportEditorFile('markdown', this.$cherry);
+      },
+    },
+    {
+      noIcon: true,
+      name: '导出html',
+      onclick(this: any) {
+        return exportEditorFile('html', this.$cherry);
+      },
+    },
+  ],
+  onClick() {
+    this.updateMarkdown = false;
+  },
+});
+
+const cherryConfig: CherryOptions<CustomConfig> = {
+  id: 'markdown-editor',
+  // 第三方包
+  externals: {
+    // externals
+    katex,
+    echarts: echartsInstance,
+  },
+  // chatGpt的openai配置
+  openai: {
+    apiKey: '', // apiKey
+    // proxy: {
+    //   host: '127.0.0.1',
+    //   port: '7890',
+    // }, // http & https代理配置
+    ignoreError: false, // 是否忽略请求失败，默认忽略
+  },
+  // 解析引擎配置
+  engine: {
+    // 全局配置
+    global: {
+      // 是否启用经典换行逻辑
+      // true：一个换行会被忽略，两个以上连续换行会分割成段落，
+      // false： 一个换行会转成<br>，两个连续换行会分割成段落，三个以上连续换行会转成<br>并分割段落
+      classicBr: false,
+    },
+    // 内置语法配置
+    syntax: {
+      link: {
+        /** 生成的<a>标签追加target属性的默认值 空：在<a>标签里不会追加target属性， _blank：在<a>标签里追加target="_blank"属性 */
+        target: '_blank',
+        /** 生成的<a>标签追加rel属性的默认值 空：在<a>标签里不会追加rel属性， nofollow：在<a>标签里追加rel="nofollow：在"属性*/
+        rel: '',
+      },
+      autoLink: {
+        /** 生成的<a>标签追加target属性的默认值 空：在<a>标签里不会追加target属性， _blank：在<a>标签里追加target="_blank"属性 */
+        target: '_blank',
+        /** 生成的<a>标签追加rel属性的默认值 空：在<a>标签里不会追加rel属性， nofollow：在<a>标签里追加rel="nofollow：在"属性*/
+        rel: '',
+        /** 是否开启短链接 */
+        enableShortLink: true,
+        /** 短链接长度 */
+        shortLinkLength: 20,
+      },
+      table: {
+        enableChart: true,
+        selfClosing: true, // 自动闭合，为true时，当输入第一行table内容时，cherry会自动按表格进行解析
+      },
+      codeBlock: {
+        wrap: true, // 超出长度是否换行，false则显示滚动条
+        lineNumber: true, // 默认显示行号
+        copyCode: true, // 是否显示“复制”按钮
+        editCode: true, // 是否显示“编辑”按钮
+        changeLang: true, // 是否显示“切换语言”按钮
+        expandCode: true, // 是否展开/收起代码块，当代码块行数大于10行时，会自动收起代码块
+        selfClosing: true, // 自动闭合，为true时，当md中有奇数个```时，会自动在md末尾追加一个```
+        mermaid: {
+          svg2img: false, // 是否将mermaid生成的画图变成img格式
+        },
+        /**
+         * indentedCodeBlock是缩进代码块是否启用的开关
+         *
+         *    在6.X之前的版本中默认不支持该语法。
+         *    因为cherry的开发团队认为该语法太丑了（容易误触）
+         *    开发团队希望用```代码块语法来彻底取代该语法
+         *    但在后续的沟通中，开发团队发现在某些场景下该语法有更好的显示效果
+         *    因此开发团队在6.X版本中才引入了该语法
+         *    已经引用6.x以下版本的业务如果想做到用户无感知升级，可以去掉该语法：
+         *        indentedCodeBlock：false
+         */
+        indentedCodeBlock: false,
+      },
+      emoji: {
+        useUnicode: true, // 是否使用unicode进行渲染
+      },
+      fontEmphasis: {
+        /**
+         * 是否允许首尾空格
+         * 首尾、前后的定义： 语法前**语法首+内容+语法尾**语法后
+         * 例：
+         *    true:
+         *           __ hello __  ====>   <strong> hello </strong>
+         *           __hello__    ====>   <strong>hello</strong>
+         *    false:
+         *           __ hello __  ====>   <em>_ hello _</em>
+         *           __hello__    ====>   <strong>hello</strong>
+         */
+        allowWhitespace: false,
+        selfClosing: false, // 自动闭合，为true时，当输入**XXX时，会自动在末尾追加**
+      },
+      strikethrough: {
+        /**
+         * 是否必须有前后空格
+         * 首尾、前后的定义： 语法前**语法首+内容+语法尾**语法后
+         * 例：
+         *    true:
+         *            hello wor~~l~~d     ====>   hello wor~~l~~d
+         *            hello wor ~~l~~ d   ====>   hello wor <del>l</del> d
+         *    false:
+         *            hello wor~~l~~d     ====>   hello wor<del>l</del>d
+         *            hello wor ~~l~~ d     ====>   hello wor <del>l</del> d
+         */
+        needWhitespace: false,
+      },
+      mathBlock: {
+        engine: 'katex', // katex或MathJax
+        src: '',
+      },
+      inlineMath: {
+        engine: 'katex', // katex或MathJax
+        src: '',
+      },
+      toc: {
+        /** 默认只渲染一个目录 */
+        allowMultiToc: false,
+        /** 是否显示自增序号 */
+        showAutoNumber: false,
+      },
+      header: {
+        /**
+         * 标题的样式：
+         *  - default       默认样式，标题前面有锚点
+         *  - autonumber    标题前面有自增序号锚点
+         *  - none          标题没有锚点
+         */
+        anchorStyle: 'none',
+      },
+    },
+  },
+  editor: {
+    id: 'code', // textarea 的id属性值
+    name: 'code', // textarea 的name属性值
+    autoSave2Textarea: false, // 是否自动将编辑区的内容回写到textarea里
+    // 编辑器的高度，默认100%，如果挂载点存在内联设置的height则以内联样式为主
+    height: '100%',
+    // defaultModel 编辑器初始化后的默认模式，一共有三种模式：1、双栏编辑预览模式；2、纯编辑模式；3、预览模式
+    // edit&preview: 双栏编辑预览模式
+    // editOnly: 纯编辑模式（没有预览，可通过toolbar切换成双栏或预览模式）
+    // previewOnly: 预览模式（没有编辑框，toolbar只显示“返回编辑”按钮，可通过toolbar切换成编辑模式）
+    defaultModel: 'edit&preview',
+    // 粘贴时是否自动将html转成markdown
+    convertWhenPaste: true,
+    // 快捷键风格，目前仅支持 sublime 和 vim
+    keyMap: 'sublime',
+    codemirror: {
+      // 是否自动focus 默认为true
+      autofocus: false,
+      placeholder: '输入文本或「/」开始编辑',
+    },
+    writingStyle: 'normal', // 书写风格，normal 普通 | typewriter 打字机 | focus 专注，默认normal
+    keepDocumentScrollAfterInit: false, // 在初始化后是否保持网页的滚动，true：保持滚动；false：网页自动滚动到cherry初始化的位置
+    showFullWidthMark: true, // 是否高亮全角符号 ·|￥|、|：|“|”|【|】|（|）|《|》
+    showSuggestList: true, // 是否显示联想框
+    maxUrlLength: 200, // url最大长度，超过则自动截断
+  },
+  toolbars: {
+    toolbar: [
+      'bold',
+      'italic',
+      {
+        strikethrough: ['strikethrough', 'underline', 'sub', 'sup', 'ruby'],
+      },
+      'size',
+      '|',
+      'color',
+      'header',
+      // '|',
+      // 'drawIo',
+      '|',
+      'ol',
+      'ul',
+      'checklist',
+      'panel',
+      // 'align',
+      'detail',
+      '|',
+      {
+        insert: [
+          // 'image',
+          // 'audio',
+          // 'video',
+          // 'link',
+          'hr',
+          'br',
+          'code',
+          // 'inlineCode',
+          // 'formula',
+          'toc',
+          'table',
+          // 'pdf',
+          // 'word',
+          // 'file',
+        ],
+      },
+      'formula',
+      'image',
+      'graph',
+      // 'proTable',
+      '|',
+      // 'search',
+      // 'shortcutKey',
+    ],
+    toolbarRight: ['customSave', 'customEditorExport', '|', 'wordCount'] as any[],
+    bubble: ['bold', 'italic', 'underline', 'strikethrough', 'sub', 'sup', 'quote', 'ruby', '|', 'size', 'color'], // array or false
+    sidebar: ['mobilePreview', 'copy', 'theme', 'customViewMode'],
+    // sidebar: ['mobilePreview', 'copy', 'theme', 'customViewMode', 'codeTheme'],
+    toc: {
+      updateLocationHash: false, // 要不要更新URL的hash
+      defaultModel: 'full', // pure: 精简模式/缩略模式，只有一排小点； full: 完整模式，会展示所有标题
+    },
+    customMenu: {
+      customSave,
+      customEditorExport,
+      customViewMode,
+    },
+    config: {
+      // 地图表格配置 - 支持自定义地图数据源URL
+      mapTable: {
+        sourceUrl: [
+          // 在线高质量地图数据源（优先）
+          'https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json',
+          // 本地备用地图数据（公共资源目录）
+          '/data/china.json',
+        ],
+      },
+    },
+  },
+  // 打开draw.io编辑页的url，如果为空则drawio按钮失效
+  drawioIframeUrl: '../utils/drawio/drawio_demo.html',
+  // drawio iframe的样式
+  drawioIframeStyle: 'border: none;',
+  /**
+   * 上传文件的时候用来指定文件类型
+   */
+  fileTypeLimitMap: {
+    video: 'video/*',
+    audio: 'audio/*',
+    image: 'image/*',
+    word: '.doc,.docx',
+    pdf: '.pdf',
+    file: '*',
+  },
+  /**
+   * 上传文件的时候是否开启多选
+   */
+  multipleFileSelection: {
+    video: false,
+    audio: false,
+    image: false,
+    word: false,
+    pdf: false,
+    file: false,
+  },
+  previewer: {
+    dom: false,
+    className: 'workgaga',
+    // 是否启用预览区域编辑能力（目前支持编辑图片尺寸、编辑表格内容）
+    enablePreviewerBubble: true,
+    floatWhenClosePreviewer: false,
+    /**
+     * 配置图片懒加载的逻辑
+     * - 如果不希望图片懒加载，可配置成 lazyLoadImg = {noLoadImgNum: -1}
+     * - 如果希望所有图片都无脑懒加载，可配置成 lazyLoadImg = {noLoadImgNum: 0, autoLoadImgNum: -1}
+     * - 如果一共有15张图片，希望：
+     *    1、前5张图片（1~5）直接加载；
+     *    2、后5张图片（6~10）不论在不在视区内，都无脑懒加载；
+     *    3、其他图片（11~15）在视区内时，进行懒加载；
+     *    则配置应该为：lazyLoadImg = {noLoadImgNum: 5, autoLoadImgNum: 5}
+     */
+    lazyLoadImg: {
+      // 加载图片时如果需要展示loading图，则配置loading图的地址
+      loadingImgPath: '',
+      // 同一时间最多有几个图片请求，最大同时加载6张图片
+      maxNumPerTime: 2,
+      // 不进行懒加载处理的图片数量，如果为0，即所有图片都进行懒加载处理， 如果设置为-1，则所有图片都不进行懒加载处理
+      noLoadImgNum: 5,
+      // 首次自动加载几张图片（不论图片是否滚动到视野内），autoLoadImgNum = -1 表示会自动加载完所有图片
+      autoLoadImgNum: 5,
+      // 针对加载失败的图片 或 beforeLoadOneImgCallback 返回false 的图片，最多尝试加载几次，为了防止死循环，最多5次。以图片的src为纬度统计重试次数
+      maxTryTimesPerSrc: 2,
+      // 加载一张图片之前的回调函数，函数return false 会终止加载操作
+      // beforeLoadOneImgCallback: (img) => {
+      //   return true;
+      // },
+      // // 加载一张图片失败之后的回调函数
+      // failLoadOneImgCallback: (img) => { },
+      // // 加载一张图片之后的回调函数，如果图片加载失败，则不会回调该函数
+      // afterLoadOneImgCallback: (img) => { },
+      // // 加载完所有图片后调用的回调函数
+      // afterLoadAllImgCallback: () => { },
+    },
+  },
+  callback: {
+    // 把中文变成拼音的回调，当然也可以把中文变成英文、英文变成中文
+    changeString2Pinyin: toPinyin,
+  },
+  /** 定义cherry缓存的作用范围，相同nameSpace的实例共享localStorage缓存 */
+  nameSpace: 'cherry',
+  themeSettings: {
+    // 主题列表，用于切换主题
+    themeList: [
+      { className: 'default', label: '默认' }, // 曾用名：light 明亮
+      { className: 'dark', label: '暗黑' },
+      { className: 'gray', label: '沉稳' },
+      { className: 'abyss', label: '深海' },
+      { className: 'green', label: '清新' },
+      { className: 'red', label: '热情' },
+      { className: 'violet', label: '淡雅' },
+      { className: 'blue', label: '清幽' },
+    ],
+    mainTheme: 'default',
+    codeBlockTheme: 'twilight',
+    inlineCodeTheme: 'red', // red or black
+  },
+  // 预览页面不需要绑定事件
+  isPreviewOnly: false,
+  // 预览区域跟随编辑器光标自动滚动
+  autoScrollByCursor: true,
+  // 外层容器不存在时，是否强制输出到body上
+  forceAppend: false,
+  // The locale Cherry is going to use. Locales live in /src/locales/
+  locale: 'zh_CN',
+  // Supplementary locales
+  locales: {},
+  // cherry初始化后是否检查 location.hash 尝试滚动到对应位置
+  autoScrollByHashAfterInit: false,
+};
+
+/**
+ * @description cherryInstance
+ */
+export const cherryInstance = (() => {
+  return () => {
+    return new Cherry(cherryConfig);
+  };
+})();
