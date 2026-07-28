@@ -61,6 +61,9 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile --network-timeout 100000
 
+      - name: Build editor package
+        run: yarn build
+
       - name: Build desktop app
         run: yarn build:client ${{ matrix.args }}
 
