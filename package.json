@@ -3,7 +3,7 @@
   "description": "a new markdown editor",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tencent/workgaga.git"
+    "url": "git+https://github.com/nonoliu/workgaga.git"
   },
   "author": "workgaga",
   "license": "Apache-2.0",

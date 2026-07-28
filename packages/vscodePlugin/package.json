@@ -1,7 +1,7 @@
 {
   "name": "workgaga-vscode-plugin",
   "displayName": "workgaga",
-  "description": "A markdown previewer powered by [workgaga](https://github.com/Tencent/workgaga) for VSCode",
+  "description": "A markdown previewer powered by [workgaga](https://github.com/nonoliu/workgaga) for VSCode",
   "version": "0.3.1",
   "publisher": "workgagaPublisher",
   "license": "Apache-2.0",
@@ -14,9 +14,9 @@
   "icon": "favicon.ico",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Tencent/workgaga.git"
+    "url": "https://github.com/nonoliu/workgaga.git"
   },
-  "homepage": "https://github.com/Tencent/workgaga",
+  "homepage": "https://github.com/nonoliu/workgaga",
   "engines": {
     "vscode": "^1.73.0"
   },

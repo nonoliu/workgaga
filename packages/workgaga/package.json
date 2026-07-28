@@ -6,7 +6,7 @@
   "description": "a new markdown editor",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tencent/workgaga.git",
+    "url": "git+https://github.com/nonoliu/workgaga.git",
     "directory": "packages/workgaga"
   },
   "main": "./dist/workgaga.js",
