@@ -73,6 +73,33 @@ export default class Copy extends MenuBase {
     };
   }
 
+  getPreviewHtml() {
+    if (this.previewer.isPreviewerHidden()) {
+      return this.previewer.options.previewerCache.html;
+    }
+
+    const previewerDom = this.previewer.getDomContainer();
+    const clonedDom = /** @type {HTMLElement} */ (previewerDom.cloneNode(true));
+    inlineComputedStyles(previewerDom, clonedDom);
+    return clonedDom.innerHTML;
+  }
+
+  getPreviewText() {
+    if (!this.previewer.isPreviewerHidden()) {
+      return getRenderedText(this.previewer.getDomContainer());
+    }
+
+    const textContainer = document.createElement('div');
+    textContainer.innerHTML = this.previewer.options.previewerCache.html;
+    textContainer.style.position = 'absolute';
+    textContainer.style.left = '-100000px';
+    textContainer.style.width = '1px';
+    document.body.appendChild(textContainer);
+    const text = getRenderedText(textContainer);
+    textContainer.remove();
+    return text;
+  }
+
   /**
    * 由于复制操作会随着预览区域的内容增加而耗时变长，所以需要增加“正在复制”的状态回显
    * 同时该状态也用于限频
@@ -115,12 +142,10 @@ export default class Copy extends MenuBase {
     const inlineCodeTheme = document.querySelector('.cherry').getAttribute('data-inline-code-theme');
     const codeBlockTheme = document.querySelector('.cherry').getAttribute('data-code-block-theme');
     const { mathStyle, echartStyle, cherryStyle } = this.computeStyle();
-    const html = this.previewer.isPreviewerHidden()
-      ? this.previewer.options.previewerCache.html
-      : this.previewer.getValue();
+    const html = this.getPreviewHtml();
 
-    // 获取原始 Markdown 内容作为纯文本
-    const markdownText = this.$cherry.getMarkdown();
+    // 获取预览区渲染后的纯文本内容
+    const plainText = this.getPreviewText();
 
     // 将css样式以行内样式的形式插入到html内容里
     this.adaptWechat(html).then((adaptedHtml) => {
@@ -129,12 +154,31 @@ export default class Copy extends MenuBase {
           <div class="workgaga">${adaptedHtml}</div>
         </div>`;
 
-      // 传递 Markdown 作为纯文本，HTML 作为富文本
-      copyToClip(markdownText, htmlContent);
+      // 传递渲染后的纯文本作为 text/plain，HTML 作为富文本
+      copyToClip(plainText, htmlContent);
       this.toggleLoading();
       this.showSuccess();
     });
   }
+}
+
+function getRenderedText(container) {
+  return container.innerText || container.textContent || '';
+}
+
+function inlineComputedStyles(source, target) {
+  if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const computedStyle = window.getComputedStyle(source);
+  Array.from(computedStyle).forEach((property) => {
+    target.style.setProperty(property, computedStyle.getPropertyValue(property), computedStyle.getPropertyPriority(property));
+  });
+
+  Array.from(source.children).forEach((child, index) => {
+    inlineComputedStyles(child, target.children[index]);
+  });
 }
 
 /**

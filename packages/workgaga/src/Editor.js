@@ -1581,6 +1581,9 @@ export default class Editor {
       }
       return;
     }
+    if (this.$cherry.status.editor !== 'show' || this.$cherry.status.previewer !== 'show') {
+      return;
+    }
     const scroller = editorView.scrollDOM;
     if (scroller.scrollTop <= 0) {
       this.previewer.scrollToLineNum(0);
@@ -1886,6 +1889,7 @@ export default class Editor {
           if (this.editor) this.editor.emit('blur', e);
           return false;
         },
+        wheel: () => false,
         scroll: () => {
           if (this.editor) this.editor.emit('scroll');
           return false;
@@ -1907,7 +1911,6 @@ export default class Editor {
       state,
       parent: parentElement,
     });
-
     textArea.style.display = 'none';
 
     const editor = new CM6Adapter(view, this.vimCompartment);

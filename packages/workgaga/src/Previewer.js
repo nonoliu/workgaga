@@ -502,6 +502,9 @@ export default class Previewer {
       if (this.isDestroyed) {
         return;
       }
+      if (this.$cherry.status.editor !== 'show' || this.$cherry.status.previewer !== 'show') {
+        return;
+      }
       if (this.applyingDomChanges) {
         return;
       }

@@ -29,6 +29,7 @@
 
   .cherry-editor,
   .cherry-previewer {
+    height: calc(100% - var(--height-toolbar));
     max-height: calc(100% - var(--height-toolbar));
     min-height: calc(100% - var(--height-toolbar));
   }
@@ -48,6 +49,8 @@
     .cm-scroller {
       font-family: inherit;
       line-height: inherit;
+      overflow-y: auto !important;
+      height: 100% !important;
     }
 
     .cm-content {
