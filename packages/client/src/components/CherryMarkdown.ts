@@ -93,8 +93,6 @@ const customSave = Cherry.createMenuHook('save', {
   },
 });
 
-const getPdfFontUrl = (): string => new URL('@fontsource/noto-sans-sc/files/noto-sans-sc-chinese-simplified-400-normal.woff2', import.meta.url).href;
-
 const dataUrlToBytes = (dataUrl: string): Uint8Array => {
   const base64 = dataUrl.split(',')[1] ?? '';
   const binary = atob(base64);
@@ -292,7 +290,7 @@ const exportEditorFile = async (type: 'pdf' | 'screenShot' | 'markdown' | 'html'
       await waitForPaint();
       const previewElement = getExportPreviewElement();
       try {
-        const pdfBytes = await exportPDF(previewElement as HTMLElement, '', { fontUrl: getPdfFontUrl() });
+        const pdfBytes = await exportPDF(previewElement as HTMLElement);
         if (!pdfBytes || pdfBytes.length < 100) {
           throw new Error('PDF 内容生成失败：未生成有效 PDF 数据');
         }
