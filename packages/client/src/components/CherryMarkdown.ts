@@ -1,8 +1,9 @@
-import Cherry from 'workgaga';
+import Cherry, { exportPDF } from 'workgaga';
 import { CherryOptions } from 'workgaga/types/cherry';
 import katex from 'katex';
 import html2canvas from 'html2canvas';
 import 'katex/dist/katex.min.css';
+import '@fontsource/noto-sans-sc/chinese-simplified.css';
 
 import { open } from '@tauri-apps/plugin-dialog';
 import { writeFile, writeTextFile } from '@tauri-apps/plugin-fs';
@@ -92,20 +93,7 @@ const customSave = Cherry.createMenuHook('save', {
   },
 });
 
-const textEncoder = new TextEncoder();
-
-const encodeText = (text: string): Uint8Array => textEncoder.encode(text);
-
-const concatBytes = (parts: Uint8Array[]): Uint8Array => {
-  const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-  parts.forEach((part) => {
-    result.set(part, offset);
-    offset += part.length;
-  });
-  return result;
-};
+const getPdfFontUrl = (): string => new URL('@fontsource/noto-sans-sc/files/noto-sans-sc-chinese-simplified-400-normal.woff2', import.meta.url).href;
 
 const dataUrlToBytes = (dataUrl: string): Uint8Array => {
   const base64 = dataUrl.split(',')[1] ?? '';
@@ -117,46 +105,14 @@ const dataUrlToBytes = (dataUrl: string): Uint8Array => {
   return bytes;
 };
 
-const createPdfFromJpeg = (imageBytes: Uint8Array, imageWidth: number, imageHeight: number): Uint8Array => {
-  const pageWidth = Math.max(1, Math.round(imageWidth));
-  const pageHeight = Math.max(1, Math.round(imageHeight));
-  const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im0 Do\nQ\n`;
-  const objects = [
-    encodeText('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n'),
-    encodeText('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n'),
-    encodeText(
-      `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`,
-    ),
-    concatBytes([
-      encodeText(
-        `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${pageWidth} /Height ${pageHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${imageBytes.length} >>\nstream\n`,
-      ),
-      imageBytes,
-      encodeText('\nendstream\nendobj\n'),
-    ]),
-    encodeText(`5 0 obj\n<< /Length ${content.length} >>\nstream\n${content}endstream\nendobj\n`),
-  ];
-  const parts: Uint8Array[] = [encodeText('%PDF-1.4\n')];
-  const offsets = objects.map((object) => {
-    const offset = parts.reduce((sum, part) => sum + part.length, 0);
-    parts.push(object);
-    return offset;
-  });
-  const xrefOffset = parts.reduce((sum, part) => sum + part.length, 0);
-  const xref = [`xref\n0 ${offsets.length + 1}\n0000000000 65535 f \n`]
-    .concat(offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`))
-    .join('');
-  parts.push(
-    encodeText(`${xref}trailer\n<< /Size ${offsets.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`),
-  );
-  return concatBytes(parts);
-};
-
 const sanitizeExportName = (name: string): string => name.replace(/[\\/:*?"<>|]/g, '').trim() || 'workgaga-export';
 
 const getExportFileName = (): string => {
+  const currentPath = (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__;
+  const documentName = currentPath?.split(/[\\/]/).pop()?.replace(/\.(md|markdown|mdown|mkdn|mdtxt|text)$/i, '');
   const heading = document.querySelector('.cherry-previewer h1')?.textContent?.trim();
-  return sanitizeExportName(heading || 'workgaga-export');
+  const title = document.title.replace(/\s*-\s*workgaga\s*$/i, '').trim();
+  return sanitizeExportName(documentName || title || heading || '未命名文档');
 };
 
 const selectExportDirectory = async (): Promise<string | null> => {
@@ -331,22 +287,28 @@ const exportEditorFile = async (type: 'pdf' | 'screenShot' | 'markdown' | 'html'
       notifySuccess('导出 html 成功');
       return;
     }
-    const { canvas, cleanup } = await renderExportCanvas();
-    try {
-      if (type === 'pdf') {
-        showExportProgress('正在生成 PDF...', 72);
-        await waitForPaint();
-        const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-        showExportProgress('正在生成 PDF 文件...', 82);
-        await waitForPaint();
-        const pdfBytes = createPdfFromJpeg(dataUrlToBytes(jpegDataUrl), canvas.width, canvas.height);
+    if (type === 'pdf') {
+      showExportProgress('正在生成 PDF...', 72);
+      await waitForPaint();
+      const previewElement = getExportPreviewElement();
+      try {
+        const pdfBytes = await exportPDF(previewElement as HTMLElement, '', { fontUrl: getPdfFontUrl() });
+        if (!pdfBytes || pdfBytes.length < 100) {
+          throw new Error('PDF 内容生成失败：未生成有效 PDF 数据');
+        }
         showExportProgress('正在写入 PDF 文件...', 92);
         await waitForPaint();
         await writeFile(joinPath(directory, `${fileName}.pdf`), pdfBytes);
         completeExportProgress('导出 PDF 成功');
-        notifySuccess('导出 PDF 成功');
-        return;
+        notifySuccess(`导出 PDF 成功：${fileName}.pdf`);
+      } finally {
+        previewElement.parentElement?.remove();
       }
+      return;
+    }
+
+    const { canvas, cleanup } = await renderExportCanvas();
+    try {
       showExportProgress('正在生成长图...', 75);
       await waitForPaint();
       await writeFile(joinPath(directory, `${fileName}.png`), dataUrlToBytes(canvas.toDataURL('image/png')));

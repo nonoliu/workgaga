@@ -115,6 +115,11 @@ const confirmProceedWhenUnsaved = async (): Promise<boolean> => {
 
 // ========== 窗口标题管理 ==========
 const updateTitle = async (path: string | null, unsaved: boolean = false): Promise<void> => {
+  if (path) {
+    (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
+  } else {
+    delete (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__;
+  }
   let fileName = '';
   if (path) {
     // 从路径中提取文件名
@@ -230,6 +235,7 @@ const createNewDocumentInKnowledgeBase = async (knowledgeBasePath?: string): Pro
   const editor = await showEditorView();
   editor.setMarkdown('');
   fileStore.setCurrentFilePath(documentPath);
+  (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = documentPath;
   await updateTitle(documentPath, false);
 };
 
@@ -266,6 +272,7 @@ const openFile = async (): Promise<FileOperationResult> => {
     const editor = await showEditorView();
     editor.setMarkdown(markdown);
     fileStore.setCurrentFilePath(path);
+    (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
 
     // 添加到最近访问列表
     addRecentDocument(path);
@@ -302,6 +309,7 @@ const saveAsNewMarkdown = async (): Promise<FileOperationResult> => {
 
     await writeTextFile(path, markdown);
     fileStore.setCurrentFilePath(path);
+    (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
     addRecentDocument(path);
     fileStore.markSaved(path);
     hasUnsavedChanges = false;
@@ -429,7 +437,8 @@ const openDocumentInEditor = async (path: string): Promise<boolean> => {
     const editor = await showEditorView();
     editor.setMarkdown(markdown);
     fileStore.setCurrentFilePath(path);
-    addRecentDocument(path);
+  (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
+  addRecentDocument(path);
     fileStore.markSaved(path);
     await updateTitle(path, false);
     return true;
@@ -476,6 +485,49 @@ const handleCreateDocumentInKnowledgeBase = (event: Event): void => {
   const path = (event as CustomEvent<{ path?: string }>).detail?.path;
   if (!path) return;
   void createNewDocumentInKnowledgeBase(path);
+};
+
+const renameKnowledgeBaseDocument = async (path: string, name: string): Promise<void> => {
+  if (!(await confirmProceedWhenUnsaved())) return;
+
+  const safeName = sanitizeFileName(name);
+  if (!safeName) {
+    notifyError('文档名称不能为空');
+    return;
+  }
+
+  const extension = path.match(/\.(md|markdown)$/i)?.[0] || '.md';
+  const directoryPath = getDirectoryPath(path);
+  let targetPath = `${directoryPath}/${safeName}${extension}`;
+  let index = 2;
+  while (targetPath !== path && (await exists(targetPath))) {
+    targetPath = `${directoryPath}/${safeName}-${index}${extension}`;
+    index += 1;
+  }
+
+  if (targetPath === path) return;
+
+  try {
+    await rename(path, targetPath);
+    fileStore.renameRecentFile(path, targetPath);
+    if (fileStore.currentFilePath === path) {
+      fileStore.setCurrentFilePath(targetPath);
+      await updateTitle(targetPath, hasUnsavedChanges);
+    }
+    window.dispatchEvent(
+      new CustomEvent(WINDOW_EVENTS.DOCUMENT_RENAMED, { detail: { oldPath: path, newPath: targetPath } }),
+    );
+    refreshKnowledgeGraphIfNeeded(targetPath);
+    notifySuccess('文档已重命名');
+  } catch (error) {
+    notifyError(`重命名文档失败：${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+const handleRenameDocumentInKnowledgeBase = (event: Event): void => {
+  const { path, name } = (event as CustomEvent<{ path?: string; name?: string }>).detail || {};
+  if (!path || !name) return;
+  void renameKnowledgeBaseDocument(path, name);
 };
 
 const handleKnowledgeGraphRefreshRequested = (): void => {
@@ -552,6 +604,7 @@ onMounted(async () => {
   // 禁用 Tauri 默认右键菜单（防止原生“查看页面元素”）
   document.addEventListener('contextmenu', preventNativeContextMenu);
   window.addEventListener(WINDOW_EVENTS.CREATE_DOCUMENT_IN_KNOWLEDGE_BASE, handleCreateDocumentInKnowledgeBase);
+  window.addEventListener(WINDOW_EVENTS.RENAME_DOCUMENT_IN_KNOWLEDGE_BASE, handleRenameDocumentInKnowledgeBase);
   window.addEventListener(WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED, handleKnowledgeGraphRefreshRequested);
   window.addEventListener(WINDOW_EVENTS.DOCUMENT_RENAMED, handleDocumentRenamed);
   window.addEventListener(WINDOW_EVENTS.DOCUMENT_DELETED, handleDocumentDeleted);
@@ -589,6 +642,7 @@ onMounted(async () => {
 onUnmounted(async () => {
   document.removeEventListener('contextmenu', preventNativeContextMenu);
   window.removeEventListener(WINDOW_EVENTS.CREATE_DOCUMENT_IN_KNOWLEDGE_BASE, handleCreateDocumentInKnowledgeBase);
+  window.removeEventListener(WINDOW_EVENTS.RENAME_DOCUMENT_IN_KNOWLEDGE_BASE, handleRenameDocumentInKnowledgeBase);
   window.removeEventListener(WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED, handleKnowledgeGraphRefreshRequested);
   window.removeEventListener(WINDOW_EVENTS.DOCUMENT_RENAMED, handleDocumentRenamed);
   window.removeEventListener(WINDOW_EVENTS.DOCUMENT_DELETED, handleDocumentDeleted);

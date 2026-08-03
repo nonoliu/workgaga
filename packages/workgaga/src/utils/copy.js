@@ -16,6 +16,47 @@
 
 import { isBrowser } from './env';
 
+function copyRichTextWithSelection(text, html = '') {
+  if (!document.body) {
+    return false;
+  }
+  const container = document.createElement('div');
+  container.setAttribute('contenteditable', 'true');
+  container.style.position = 'fixed';
+  container.style.left = '-100000px';
+  container.style.top = '0';
+  container.style.width = '1px';
+  container.style.height = '1px';
+  container.style.overflow = 'hidden';
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(container);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  const listener = (event) => {
+    if (text) {
+      event.clipboardData.setData('text/plain', text);
+    }
+    if (html) {
+      event.clipboardData.setData('text/html', html);
+    }
+    event.preventDefault();
+  };
+  document.addEventListener('copy', listener);
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    document.removeEventListener('copy', listener);
+    selection.removeAllRanges();
+    container.remove();
+  }
+  return copied;
+}
+
 /**
  * 复制内容到剪贴板
  * @param {string} [text] - 可选的纯文本内容 (text/plain)
@@ -27,6 +68,10 @@ export async function copyToClip(text, html) {
   // 验证输入
   if (!text && !html) {
     throw new Error('没有提供任何内容进行复制');
+  }
+
+  if (isBrowser() && html && copyRichTextWithSelection(text, html)) {
+    return;
   }
 
   if (isBrowser() && navigator.clipboard && window.ClipboardItem) {

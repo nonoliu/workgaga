@@ -12,6 +12,7 @@ export const WINDOW_EVENTS = {
   KNOWLEDGE_GRAPH_REFRESH_REQUESTED: 'cherry:knowledge-graph-refresh-requested',
   KNOWLEDGE_BASE_CHANGED: 'cherry:knowledge-base-changed',
   CREATE_DOCUMENT_IN_KNOWLEDGE_BASE: 'cherry:create-document-in-knowledge-base',
+  RENAME_DOCUMENT_IN_KNOWLEDGE_BASE: 'cherry:rename-document-in-knowledge-base',
   DOCUMENT_RENAMED: 'cherry:document-renamed',
   DOCUMENT_DELETED: 'cherry:document-deleted',
   CHANGE_EDITOR_VIEW_MODE: 'cherry:change-editor-view-mode',

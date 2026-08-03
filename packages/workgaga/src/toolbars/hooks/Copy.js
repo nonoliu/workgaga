@@ -74,30 +74,37 @@ export default class Copy extends MenuBase {
   }
 
   getPreviewHtml() {
-    if (this.previewer.isPreviewerHidden()) {
-      return this.previewer.options.previewerCache.html;
+    const previewerDom = this.previewer.getDomContainer();
+    if (!this.previewer.isPreviewerHidden()) {
+      const clonedDom = /** @type {HTMLElement} */ (previewerDom.cloneNode(true));
+      inlineComputedStyles(previewerDom, clonedDom);
+      normalizeClipboardLists(clonedDom);
+      return this.previewer.lazyLoadImg.changeDataSrc2Src(clonedDom.innerHTML);
     }
 
-    const previewerDom = this.previewer.getDomContainer();
-    const clonedDom = /** @type {HTMLElement} */ (previewerDom.cloneNode(true));
-    inlineComputedStyles(previewerDom, clonedDom);
-    return clonedDom.innerHTML;
+    const cachedDom = document.createElement('div');
+    cachedDom.innerHTML = this.previewer.options.previewerCache.html;
+    cachedDom.style.position = 'absolute';
+    cachedDom.style.left = '-100000px';
+    cachedDom.style.width = `${previewerDom.getBoundingClientRect().width}px`;
+    document.body.appendChild(cachedDom);
+    const clonedDom = /** @type {HTMLElement} */ (cachedDom.cloneNode(true));
+    inlineComputedStyles(cachedDom, clonedDom);
+    normalizeClipboardLists(clonedDom);
+    const html = this.previewer.lazyLoadImg.changeDataSrc2Src(clonedDom.innerHTML);
+    cachedDom.remove();
+    return html;
   }
 
   getPreviewText() {
-    if (!this.previewer.isPreviewerHidden()) {
-      return getRenderedText(this.previewer.getDomContainer());
+    const textContainer = this.previewer.isPreviewerHidden()
+      ? document.createElement('div')
+      : /** @type {HTMLElement} */ (this.previewer.getDomContainer().cloneNode(true));
+    if (this.previewer.isPreviewerHidden()) {
+      textContainer.innerHTML = this.previewer.options.previewerCache.html;
     }
-
-    const textContainer = document.createElement('div');
-    textContainer.innerHTML = this.previewer.options.previewerCache.html;
-    textContainer.style.position = 'absolute';
-    textContainer.style.left = '-100000px';
-    textContainer.style.width = '1px';
-    document.body.appendChild(textContainer);
-    const text = getRenderedText(textContainer);
-    textContainer.remove();
-    return text;
+    normalizeClipboardLists(textContainer, true);
+    return getRenderedText(textContainer);
   }
 
   /**
@@ -155,15 +162,81 @@ export default class Copy extends MenuBase {
         </div>`;
 
       // 传递渲染后的纯文本作为 text/plain，HTML 作为富文本
-      copyToClip(plainText, htmlContent);
-      this.toggleLoading();
-      this.showSuccess();
+      copyToClip(plainText, htmlContent)
+        .then(() => {
+          this.showSuccess();
+        })
+        .finally(() => {
+          this.toggleLoading();
+        });
     });
   }
 }
 
+function normalizeClipboardLists(container, includeMarkers = false) {
+  container.querySelectorAll('ul, ol').forEach((list) => {
+    const listElement = /** @type {HTMLElement} */ (list);
+    if (includeMarkers) {
+      listElement.style.listStyle = 'none';
+    }
+    listElement.style.listStylePosition = 'outside';
+    listElement.style.paddingLeft = '0';
+    listElement.style.marginLeft = '0';
+    listElement.style.display = 'block';
+  });
+  container.querySelectorAll('li').forEach((item) => {
+    const list = item.parentElement;
+    if (!list || (list.tagName !== 'UL' && list.tagName !== 'OL')) {
+      return;
+    }
+    const depth = getListDepth(list);
+    const siblings = Array.from(list.children).filter((child) => child.tagName === 'LI');
+    const index = siblings.indexOf(item) + 1;
+    const marker = list.tagName === 'OL' ? `${index}. ` : '- ';
+    item.style.display = 'block';
+    item.style.listStyle = 'none';
+    item.style.marginLeft = `${Math.max(depth - 1, 0) * 2}em`;
+    if (includeMarkers) {
+      item.insertBefore(document.createTextNode(`${'  '.repeat(Math.max(depth - 1, 0))}${marker}`), item.firstChild);
+    }
+  });
+}
+
 function getRenderedText(container) {
-  return container.innerText || container.textContent || '';
+  const textContainer = /** @type {HTMLElement} */ (container.cloneNode(true));
+  textContainer.querySelectorAll('script, style, button').forEach((element) => element.remove());
+  textContainer.querySelectorAll('ul, ol').forEach((list) => {
+    const listElement = /** @type {HTMLElement} */ (list);
+    listElement.style.listStyle = 'none';
+    listElement.style.paddingLeft = '0';
+    listElement.style.marginLeft = '0';
+  });
+  textContainer.querySelectorAll('li').forEach((item) => {
+    const list = item.parentElement;
+    if (!list || (list.tagName !== 'UL' && list.tagName !== 'OL')) {
+      return;
+    }
+    const depth = getListDepth(list);
+    const siblings = Array.from(list.children).filter((child) => child.tagName === 'LI');
+    const index = siblings.indexOf(item) + 1;
+    const marker = list.tagName === 'OL' ? `${index}. ` : '- ';
+    item.style.listStyle = 'none';
+    item.insertBefore(document.createTextNode(`${'  '.repeat(Math.max(depth - 1, 0))}${marker}`), item.firstChild);
+  });
+
+  return (textContainer.innerText || textContainer.textContent || '').replace(/[ \t]+\n/g, '\n').trim();
+}
+
+function getListDepth(list) {
+  let depth = 1;
+  let parent = list.parentElement;
+  while (parent) {
+    if (parent.tagName === 'UL' || parent.tagName === 'OL') {
+      depth += 1;
+    }
+    parent = parent.parentElement;
+  }
+  return depth;
 }
 
 function inlineComputedStyles(source, target) {
@@ -172,7 +245,51 @@ function inlineComputedStyles(source, target) {
   }
 
   const computedStyle = window.getComputedStyle(source);
-  Array.from(computedStyle).forEach((property) => {
+  const clipboardStyleProperties = [
+    'background',
+    'background-color',
+    'border',
+    'border-collapse',
+    'border-color',
+    'border-spacing',
+    'border-style',
+    'border-width',
+    'box-sizing',
+    'caption-side',
+    'color',
+    'font-family',
+    'font-size',
+    'font-style',
+    'font-variant',
+    'font-weight',
+    'height',
+    'line-height',
+    'list-style-position',
+    'list-style-type',
+    'margin',
+    'margin-bottom',
+    'margin-left',
+    'margin-right',
+    'margin-top',
+    'max-width',
+    'min-height',
+    'padding',
+    'padding-bottom',
+    'padding-left',
+    'padding-right',
+    'padding-top',
+    'table-layout',
+    'text-align',
+    'text-decoration',
+    'text-indent',
+    'text-transform',
+    'vertical-align',
+    'white-space',
+    'width',
+    'word-break',
+    'overflow-wrap',
+  ];
+  clipboardStyleProperties.forEach((property) => {
     target.style.setProperty(property, computedStyle.getPropertyValue(property), computedStyle.getPropertyPriority(property));
   });
 

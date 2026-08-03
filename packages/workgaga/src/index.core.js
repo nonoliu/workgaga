@@ -25,5 +25,6 @@ if (isBrowser()) {
 }
 
 export { SyntaxHookBase, MenuHookBase };
+export { exportPDF } from './utils/export';
 
 export default Cherry;

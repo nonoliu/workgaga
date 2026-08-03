@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 import html2canvas from 'html2canvas';
+import { PDFDocument, PDFName, PDFString, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
+import { loadPdfFonts } from './pdfFont';
 
 /**
  * 将预览区域的内容放在body上准备后续导出操作
@@ -55,6 +58,45 @@ const getReadyToExport = (previewDom, cb) => {
   });
 };
 
+function inlinePrintStyles(container) {
+  const styleProperties = [
+    'background-color',
+    'border',
+    'border-collapse',
+    'border-color',
+    'border-spacing',
+    'border-style',
+    'border-width',
+    'color',
+    'display',
+    'font-family',
+    'font-size',
+    'font-style',
+    'font-weight',
+    'line-height',
+    'list-style-position',
+    'list-style-type',
+    'margin',
+    'padding',
+    'page-break-inside',
+    'text-align',
+    'text-decoration',
+    'vertical-align',
+    'white-space',
+    'width',
+    'word-break',
+  ];
+  container.querySelectorAll('*').forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const computedStyle = window.getComputedStyle(element);
+    styleProperties.forEach((property) => {
+      element.style.setProperty(property, computedStyle.getPropertyValue(property));
+    });
+  });
+}
+
 /**
  * 下载文件
  * @param {String} downloadUrl 图片本地地址
@@ -71,33 +113,204 @@ const fileDownload = (downloadUrl, fileName) => {
 };
 
 /**
- * 利用window.print导出成PDF
- * @param {HTMLElement} previewDom 预览区域的dom
- * @param {String} fileName 导出PDF文件名
+ * 将预览 DOM 导出为 A4 原生文本 PDF。
+ * @param {HTMLElement} previewDom 预览区域的 dom
+ * @param {String} fileName 导出 PDF 文件名
+ * @returns {Promise<Uint8Array>}
  */
-export function exportPDF(previewDom, fileName) {
-  const oldTitle = document.title;
-  document.title = fileName;
+export async function exportPDF(previewDom, fileName = '', options = {}) {
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const margin = 42;
+  const scale = 72 / 96;
+  const { regular: pdfFont, bold: pdfBold, italic: pdfItalic, boldItalic: pdfBoldItalic } = await loadPdfFonts(pdfDoc, options.fontUrl);
+  const form = pdfDoc.getForm();
+  let page = pdfDoc.addPage([pageWidth, pageHeight]);
+  let cursorY = pageHeight - margin;
 
-  getReadyToExport(previewDom, (/** @type {HTMLElement}*/ cherryPreviewer, /** @type {function}*/ thenFinish) => {
-    // 开启导出专用样式开关，仅在导出流程中生效，避免常规打印误隐藏整页
-    const htmlEl = document.documentElement;
-    const hadExportOnly = htmlEl.classList.contains('cherry-export-only');
-    if (!hadExportOnly) htmlEl.classList.add('cherry-export-only');
-    // 强制展开所有代码块
-    cherryPreviewer.innerHTML = cherryPreviewer.innerHTML.replace(
-      /class="cherry-code-unExpand("| )/g,
-      'class="cherry-code-expand$1',
-    );
-    try {
-      window.print();
-    } finally {
-      thenFinish();
-      // 还原打印专用样式开关
-      if (!hadExportOnly) htmlEl.classList.remove('cherry-export-only');
-      document.title = oldTitle;
+  const color = (value, fallback = '#000000') => {
+    const match = (value || fallback).match(/#([0-9a-f]{3,8})/i);
+    if (!match) return rgb(0, 0, 0);
+    const hex = match[1].length === 3 ? match[1].split('').map((v) => v + v).join('') : match[1];
+    return rgb(parseInt(hex.slice(0, 2), 16) / 255, parseInt(hex.slice(2, 4), 16) / 255, parseInt(hex.slice(4, 6), 16) / 255);
+  };
+  const styleOf = (element) => window.getComputedStyle(element);
+  const nextPage = () => {
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    cursorY = pageHeight - margin;
+  };
+  const ensureSpace = (height) => {
+    if (cursorY - height < margin) nextPage();
+  };
+  const selectFont = (style) => {
+    const bold = Number.parseInt(style.fontWeight, 10) >= 600 || style.fontWeight === 'bold';
+    const italic = style.fontStyle === 'italic' || style.fontStyle === 'oblique';
+    return bold && italic ? pdfBoldItalic : bold ? pdfBold : italic ? pdfItalic : pdfFont;
+  };
+  const drawBackground = (element, x, y, width, height, style) => {
+    if (style.backgroundColor && style.backgroundColor !== 'rgba(0, 0, 0, 0)' && style.backgroundColor !== 'transparent') {
+      page.drawRectangle({ x, y: y - height, width, height, color: color(style.backgroundColor) });
     }
-  });
+  };
+  const drawText = (value, style, indent = 0, link = null) => {
+    const text = value.replace(/[\t ]+/g, ' ').replace(/\n+/g, '\n').trim();
+    if (!text) return;
+    const size = Math.max(5, Number.parseFloat(style.fontSize || '16') * scale);
+    const lineHeightValue = Number.parseFloat(style.lineHeight);
+    const lineHeight = Math.max(size * 1.25, (Number.isFinite(lineHeightValue) ? lineHeightValue * scale : size * 1.25));
+    const font = selectFont(style);
+    const maxWidth = pageWidth - margin * 2 - indent;
+    const words = Array.from(text);
+    let line = '';
+    const lines = [];
+    words.forEach((word) => {
+      if (word === '\n') {
+        if (line) lines.push(line);
+        line = '';
+        return;
+      }
+      const candidate = line + word;
+      if (font.widthOfTextAtSize(candidate, size) > maxWidth && line) {
+        lines.push(line);
+        line = word;
+      } else line = candidate;
+    });
+    if (line) lines.push(line);
+    lines.forEach((lineText) => {
+      ensureSpace(lineHeight);
+      const x = margin + indent;
+      const baseline = cursorY - size;
+      page.drawText(lineText, { x, y: baseline, size, font, color: color(style.color) });
+      if (style.textDecorationLine === 'underline') page.drawLine({ start: { x, y: baseline - 1 }, end: { x: x + font.widthOfTextAtSize(lineText, size), y: baseline - 1 }, thickness: 0.5, color: color(style.color) });
+      if (link) {
+        const linkRef = page.doc.context.register(page.doc.context.obj({ Type: 'Annot', Subtype: 'Link', Rect: [x, baseline - 2, x + font.widthOfTextAtSize(lineText, size), baseline + size + 2], Border: [0, 0, 0], A: { Type: 'Action', S: 'URI', URI: PDFString.of(link) } }));
+        page.node.set(PDFName.of('Annots'), page.doc.context.obj([linkRef]));
+      }
+      cursorY -= lineHeight;
+    });
+  };
+  const loadImage = async (src) => {
+    try {
+      const response = await fetch(src);
+      if (!response.ok) return null;
+      const bytes = await response.arrayBuffer();
+      return src.match(/\\.jpe?g($|\\?)/i) ? pdfDoc.embedJpg(bytes) : pdfDoc.embedPng(bytes);
+    } catch (error) {
+      return null;
+    }
+  };
+  const drawNode = async (node, indent = 0, inheritedStyle = null) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      drawText(node.textContent || '', inheritedStyle || window.getComputedStyle(previewDom), indent);
+      return;
+    }
+    if (!(node instanceof HTMLElement)) return;
+    const tag = node.tagName.toLowerCase();
+    const style = styleOf(node);
+    if (['script', 'style', 'noscript'].includes(tag)) return;
+    if (['input', 'textarea', 'select'].includes(tag)) {
+      /** @type {any} */
+      const control = node;
+      const fieldName = control.name || control.id || `field-${Math.random().toString(36).slice(2)}`;
+      /** @type {any} */
+      const field = tag === 'textarea' ? form.createTextField(fieldName) : tag === 'select' ? form.createDropdown(fieldName) : form.createTextField(fieldName);
+      if (tag === 'select') Array.from(control.options).forEach((option) => field.addOption(option.text));
+      if (control.value) {
+        if (tag === 'select') field.select(control.value);
+        else field.setText(control.value);
+      }
+      const fieldWidth = Math.min(280, pageWidth - margin * 2 - indent);
+      const fieldHeight = tag === 'textarea' ? Math.min(72, Math.max(36, Number.parseFloat(style.height) * scale || 36)) : 18;
+      ensureSpace(fieldHeight + 8);
+      field.addToPage(page, { x: margin + indent, y: cursorY - fieldHeight, width: fieldWidth, height: fieldHeight, borderWidth: 1, textColor: color(style.color), backgroundColor: color(style.backgroundColor || '#ffffff') });
+      cursorY -= fieldHeight + 8;
+      return;
+    }
+    if (tag === 'a') {
+      const linkNode = /** @type {HTMLAnchorElement} */ (node);
+      drawText(linkNode.textContent || linkNode.href, style, indent, linkNode.href || null);
+      return;
+    }
+    if (tag === 'br') {
+      ensureSpace(16);
+      cursorY -= 16;
+      return;
+    }
+    if (tag === 'hr') { ensureSpace(10); page.drawLine({ start: { x: margin + indent, y: cursorY - 4 }, end: { x: pageWidth - margin, y: cursorY - 4 }, thickness: 0.7, color: color(style.borderTopColor || style.color) }); cursorY -= 12; return; }
+    if (tag === 'img') {
+      /** @type {HTMLImageElement} */
+      const imageNode = /** @type {HTMLImageElement} */ (node);
+      const image = await loadImage(imageNode.currentSrc || imageNode.src);
+      if (!image) return;
+      const width = Math.min((Number.parseFloat(node.getAttribute('width') || style.width) || image.width) * scale, pageWidth - margin * 2 - indent);
+      const height = width * image.height / image.width;
+      ensureSpace(height + 8);
+      page.drawImage(image, { x: margin + indent, y: cursorY - height, width, height });
+      cursorY -= height + 8;
+      return;
+    }
+    if (tag === 'table') {
+      const rows = Array.from(node.querySelectorAll(':scope > tbody > tr, :scope > tr'));
+      const cells = rows.map((row) => Array.from(row.children));
+      const columns = Math.max(1, ...cells.map((row) => row.length));
+      const width = pageWidth - margin * 2 - indent;
+      const cellWidth = width / columns;
+      for (const row of cells) {
+        const values = row.map((cell) => cell.textContent?.trim() || '');
+        const rowHeight = 22;
+        ensureSpace(rowHeight);
+        const rowTop = cursorY;
+        let rowBottom = rowTop - rowHeight;
+        values.forEach((value, index) => {
+          const x = margin + indent + index * cellWidth;
+          page.drawRectangle({ x, y: rowTop - rowHeight, width: cellWidth, height: rowHeight, borderColor: color(style.borderColor || '#888888'), borderWidth: 0.5, color: color(style.backgroundColor || '#ffffff') });
+          const cellCursor = cursorY;
+          cursorY = rowTop - 4;
+          drawText(value, style, indent + index * cellWidth + 4);
+          rowBottom = Math.min(rowBottom, cursorY);
+          cursorY = cellCursor;
+        });
+        cursorY = Math.min(rowBottom, rowTop - rowHeight) - 4;
+      }
+      cursorY -= 6;
+      return;
+    }
+    const isBlock = /^(h[1-6]|p|div|section|article|blockquote|pre|ul|ol|li|table|figure)$/.test(tag);
+    if (isBlock) {
+      const marginTop = Number.parseFloat(style.marginTop) * scale || 0;
+      cursorY -= marginTop;
+      if (tag.match(/^h[1-6]$/)) {
+        drawText(node.textContent || '', style, indent);
+      } else if (tag === 'li') {
+        const list = node.parentElement?.tagName.toLowerCase();
+        const index = Array.from(node.parentElement?.children || []).indexOf(node) + 1;
+        drawText(`${list === 'ol' ? `${index}.` : '•'} ${node.textContent || ''}`, style, indent);
+      } else if (tag === 'pre' || tag === 'code') {
+        drawBackground(node, margin + indent, cursorY, pageWidth - margin * 2 - indent, 24, style);
+        drawText(node.textContent || '', style, indent + 6);
+      } else if (tag === 'blockquote') {
+        page.drawLine({ start: { x: margin + indent, y: cursorY }, end: { x: margin + indent, y: cursorY - 24 }, thickness: 2, color: color(style.borderLeftColor || '#999999') });
+        await Promise.all(Array.from(node.childNodes).map((child) => drawNode(child, indent + 12, style)));
+      } else {
+        for (const child of node.childNodes) await drawNode(child, indent + (tag === 'ul' || tag === 'ol' ? 12 : 0), style);
+      }
+      cursorY -= Number.parseFloat(style.marginBottom) * scale || 6;
+    } else {
+      for (const child of node.childNodes) await drawNode(child, indent, style);
+    }
+  };
+
+  for (const child of previewDom.childNodes) await drawNode(child);
+  const bytes = await pdfDoc.save();
+  if (fileName) {
+    const blob = new Blob([new Uint8Array(bytes)], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    fileDownload(url, `${fileName}.pdf`);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+  }
+  return bytes;
 }
 
 /**
