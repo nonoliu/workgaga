@@ -16,7 +16,9 @@
           class="activity-btn"
           :class="{ active: panel.id === activePanelId }"
           :title="panel.label"
-          @click="selectPanel(panel.id)"
+          @click="
+            panel.id === 'graph' ? openKnowledgeGraph() : selectPanel(panel.id)
+          "
         >
           <component :is="panel.icon" :size="18" />
           <span class="sr-only">{{ panel.label }}</span>
@@ -47,10 +49,19 @@
           >
             打开文档
           </button>
-          <button v-if="activePanelId === 'graph'" class="header-action" title="刷新图谱" @click="triggerRefreshGraph">
+          <button
+            v-if="activePanelId === 'graph'"
+            class="header-action"
+            title="刷新图谱"
+            @click="triggerRefreshGraph"
+          >
             刷新图谱
           </button>
-          <button class="header-toggle" :title="isCollapsed ? '展开侧边栏' : '折叠侧边栏'" @click="toggleCollapse">
+          <button
+            class="header-toggle"
+            :title="isCollapsed ? '展开侧边栏' : '折叠侧边栏'"
+            @click="toggleCollapse"
+          >
             <ArrowIcon :size="14" :direction="isCollapsed ? 'right' : 'left'" />
           </button>
         </div>
@@ -63,22 +74,52 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, shallowRef, type Component } from 'vue';
-import ExplorerPanel from './ExplorerPanel.vue';
-import RecentPanel from './RecentPanel.vue';
-import KnowledgeGraphPanel from './KnowledgeGraphPanel.vue';
-import { FolderIcon, FileIcon, ArrowIcon, GraphIcon, DashboardIcon, AiIcon } from './icons';
-import { useFileStore } from '../store';
+import {
+  computed,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  type Component,
+} from "vue";
+import ExplorerPanel from "./ExplorerPanel.vue";
+import RecentPanel from "./RecentPanel.vue";
+import KnowledgeGraphSummary from "./KnowledgeGraphSummary.vue";
+import {
+  FolderIcon,
+  FileIcon,
+  ArrowIcon,
+  GraphIcon,
+  DashboardIcon,
+  AiIcon,
+} from "./icons";
+import { useFileStore } from "../store";
 
 // 导入 package.json 中的版本信息
 const version = __APP_VERSION__;
 
 const openDashboard = () => {
-  window.dispatchEvent(new CustomEvent('switch-main-view', { detail: { view: 'dashboard' } }));
+  window.dispatchEvent(
+    new CustomEvent("switch-main-view", { detail: { view: "dashboard" } }),
+  );
 };
 
 const openAI = () => {
-  window.dispatchEvent(new CustomEvent('switch-main-view', { detail: { view: 'ai' } }));
+  window.dispatchEvent(
+    new CustomEvent("switch-main-view", { detail: { view: "ai" } }),
+  );
+};
+
+const openKnowledgeGraph = (): void => {
+  window.dispatchEvent(
+    new CustomEvent("switch-main-view", { detail: { view: "knowledgeGraph" } }),
+  );
+};
+
+const handleOpenExplorer = (): void => {
+  activePanelId.value = "explorer";
+  localStorage.setItem(ACTIVE_PANEL_KEY, "explorer");
+  ensureExpanded();
 };
 
 interface PanelDefinition {
@@ -88,12 +129,22 @@ interface PanelDefinition {
   component: Component;
 }
 
-const ACTIVE_PANEL_KEY = 'cherry-sidebar-active-panel';
+const ACTIVE_PANEL_KEY = "cherry-sidebar-active-panel";
 
 const panels = shallowRef<PanelDefinition[]>([
-  { id: 'recent', label: '最近文档', icon: FileIcon, component: RecentPanel },
-  { id: 'explorer', label: '知识库', icon: FolderIcon, component: ExplorerPanel },
-  { id: 'graph', label: '知识图谱', icon: GraphIcon, component: KnowledgeGraphPanel },
+  { id: "recent", label: "最近文档", icon: FileIcon, component: RecentPanel },
+  {
+    id: "explorer",
+    label: "知识库",
+    icon: FolderIcon,
+    component: ExplorerPanel,
+  },
+  {
+    id: "graph",
+    label: "知识图谱",
+    icon: GraphIcon,
+    component: KnowledgeGraphSummary,
+  },
 ]);
 
 const fileStore = useFileStore();
@@ -101,14 +152,18 @@ const fileStore = useFileStore();
 const loadActivePanel = (): string => {
   const saved = localStorage.getItem(ACTIVE_PANEL_KEY);
   const exists = panels.value.some((panel) => panel.id === saved);
-  return exists ? (saved as string) : 'explorer';
+  return exists ? (saved as string) : "explorer";
 };
 
 const activePanelId = ref<string>(loadActivePanel());
 const panelRef = ref<Component | null>(null);
 
 const isCollapsed = computed(() => fileStore.sidebarCollapsed);
-const activePanel = computed(() => panels.value.find((panel) => panel.id === activePanelId.value) || panels.value[0]);
+const activePanel = computed(
+  () =>
+    panels.value.find((panel) => panel.id === activePanelId.value) ||
+    panels.value[0],
+);
 
 const ensureExpanded = (): void => {
   if (fileStore.sidebarCollapsed) {
@@ -138,28 +193,40 @@ type PanelExpose = {
   refreshGraph?: () => void;
 };
 
-const getPanelExpose = (): PanelExpose | null => panelRef.value as PanelExpose | null;
+const getPanelExpose = (): PanelExpose | null =>
+  panelRef.value as PanelExpose | null;
 
 const triggerOpenDirectory = (): void => {
   const panelExpose = getPanelExpose();
-  if (activePanelId.value === 'explorer' && panelExpose?.openKnowledgeBase) {
+  if (activePanelId.value === "explorer" && panelExpose?.openKnowledgeBase) {
     panelExpose.openKnowledgeBase();
   }
 };
 
 const triggerOpenRecentFile = (): void => {
   const panelExpose = getPanelExpose();
-  if (activePanelId.value === 'recent' && panelExpose?.openRecentFile) {
+  if (activePanelId.value === "recent" && panelExpose?.openRecentFile) {
     panelExpose.openRecentFile();
   }
 };
 
 const triggerRefreshGraph = (): void => {
   const panelExpose = getPanelExpose();
-  if (activePanelId.value === 'graph' && panelExpose?.refreshGraph) {
+  if (activePanelId.value === "graph" && panelExpose?.refreshGraph) {
     panelExpose.refreshGraph();
   }
 };
+
+onMounted(() => {
+  window.addEventListener("knowledge-graph-open-explorer", handleOpenExplorer);
+});
+
+onUnmounted(() => {
+  window.removeEventListener(
+    "knowledge-graph-open-explorer",
+    handleOpenExplorer,
+  );
+});
 </script>
 
 <style scoped>

@@ -6,6 +6,7 @@
     "dev": "npx node ./scripts/sync-version.js && vite",
     "build": "npx node ./scripts/sync-version.js && vue-tsc --noEmit && vite build",
     "preview": "vite preview",
+    "test": "vitest run",
     "version:sync": "node ./scripts/sync-version.js",
     "lint": "cd ../.. && npx prettier --check packages/client/src/**/*.{ts,vue} && npx eslint packages/client/src/**/*.{ts,vue}",
     "lint:fix": "cd ../.. && npx prettier --write packages/client/src/**/*.{ts,vue} && npx eslint packages/client/src/**/*.{ts,vue} --fix"

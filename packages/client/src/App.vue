@@ -1,42 +1,63 @@
 <script setup lang="ts">
-import { cherryInstance } from './components/CherryMarkdown';
-import { invoke } from '@tauri-apps/api/core';
-import { getCurrentWindow } from '@tauri-apps/api/window';
-import { open, save } from '@tauri-apps/plugin-dialog';
-import { exists, mkdir, readDir, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
-import { register, unregister } from '@tauri-apps/plugin-global-shortcut';
-import { useFileStore, useKnowledgeGraphStore } from './store';
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
-import SidePanelManager from './components/SidePanelManager.vue';
-import Dashboard from './components/Dashboard.vue';
-import AIAssistantPage from './components/AIAssistantPage.vue';
-import ToastContainer from './components/ui/ToastContainer.vue';
-import UnsavedChangesDialog, { type UnsavedDialogResult } from './components/ui/UnsavedChangesDialog.vue';
-import type { FileOperationResult } from './components/types';
-import { useAppEvents, type OpenFileFromSidebarEvent } from './components/composables/useAppEvents';
-import { notifyError, notifySuccess } from './utils/notifications';
-import { MESSAGES, DIALOGS } from './constants/i18n';
-import { WINDOW_EVENTS } from './constants/events';
+import { cherryInstance } from "./components/CherryMarkdown";
+import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import {
+  exists,
+  mkdir,
+  readDir,
+  readTextFile,
+  rename,
+  writeTextFile,
+} from "@tauri-apps/plugin-fs";
+import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
+import { useFileStore, useKnowledgeGraphStore } from "./store";
+import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import SidePanelManager from "./components/SidePanelManager.vue";
+import Dashboard from "./components/Dashboard.vue";
+import AIAssistantPage from "./components/AIAssistantPage.vue";
+import KnowledgeGraphWorkspace from "./components/KnowledgeGraphWorkspace.vue";
+import ToastContainer from "./components/ui/ToastContainer.vue";
+import UnsavedChangesDialog, {
+  type UnsavedDialogResult,
+} from "./components/ui/UnsavedChangesDialog.vue";
+import type { FileOperationResult } from "./components/types";
+import {
+  useAppEvents,
+  type OpenFileFromSidebarEvent,
+} from "./components/composables/useAppEvents";
+import { notifyError, notifySuccess } from "./utils/notifications";
+import { MESSAGES, DIALOGS } from "./constants/i18n";
+import { WINDOW_EVENTS } from "./constants/events";
 
 // 响应式数据
 let workgaga: ReturnType<typeof cherryInstance> | null = null;
 const fileStore = useFileStore();
 const knowledgeGraphStore = useKnowledgeGraphStore();
-const appWindow = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window ? getCurrentWindow() : null;
+const appWindow =
+  typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
+    ? getCurrentWindow()
+    : null;
 let needDealAfterChange = false;
 let hasUnsavedChanges = false;
 let unlistenCloseRequested: (() => void) | undefined;
+let knowledgeGraphRefreshTimer: ReturnType<typeof setTimeout> | undefined;
 
-const activeMainView = ref<'editor' | 'dashboard' | 'ai'>('dashboard');
+const activeMainView = ref<"editor" | "dashboard" | "ai" | "knowledgeGraph">(
+  "dashboard",
+);
 
-const ensureEditorReady = async (show: boolean = true): Promise<NonNullable<typeof workgaga>> => {
+const ensureEditorReady = async (
+  show: boolean = true,
+): Promise<NonNullable<typeof workgaga>> => {
   if (show) {
-    activeMainView.value = 'editor';
+    activeMainView.value = "editor";
     await nextTick();
   }
   if (!workgaga) {
     workgaga = cherryInstance();
-    workgaga.on('afterChange', dealAfterChange);
+    workgaga.on("afterChange", dealAfterChange);
   }
   return workgaga;
 };
@@ -46,8 +67,8 @@ const refreshEditorLayout = async (): Promise<void> => {
   requestAnimationFrame(() => {
     if (!workgaga) return;
     workgaga.editor?.refresh?.();
-    workgaga.$event?.emit?.('layoutChange', {});
-    window.dispatchEvent(new Event('resize'));
+    workgaga.$event?.emit?.("layoutChange", {});
+    window.dispatchEvent(new Event("resize"));
   });
 };
 
@@ -62,7 +83,8 @@ const isLoading = ref(false);
 
 // 未保存对话框状态
 const showUnsavedDialog = ref(false);
-let unsavedDialogResolve: ((_result: UnsavedDialogResult) => void) | null = null;
+let unsavedDialogResolve: ((_result: UnsavedDialogResult) => void) | null =
+  null;
 const preventNativeContextMenu = (event: Event): void => {
   event.preventDefault();
 };
@@ -100,12 +122,12 @@ const confirmProceedWhenUnsaved = async (): Promise<boolean> => {
 
   const result = await showUnsavedConfirmDialog();
 
-  if (result === 'save') {
+  if (result === "save") {
     // 保存并继续：只执行保存，不继续后续操作（不销毁当前内容）
     await saveMarkdown();
     return false;
   }
-  if (result === 'discard') {
+  if (result === "discard") {
     // 放弃更改，继续操作
     return true;
   }
@@ -114,20 +136,26 @@ const confirmProceedWhenUnsaved = async (): Promise<boolean> => {
 };
 
 // ========== 窗口标题管理 ==========
-const updateTitle = async (path: string | null, unsaved: boolean = false): Promise<void> => {
+const updateTitle = async (
+  path: string | null,
+  unsaved: boolean = false,
+): Promise<void> => {
   if (path) {
-    (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
+    (
+      window as Window & { __WORKGAGA_CURRENT_FILE__?: string }
+    ).__WORKGAGA_CURRENT_FILE__ = path;
   } else {
-    delete (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__;
+    delete (window as Window & { __WORKGAGA_CURRENT_FILE__?: string })
+      .__WORKGAGA_CURRENT_FILE__;
   }
-  let fileName = '';
+  let fileName = "";
   if (path) {
     // 从路径中提取文件名
     const pathParts = path.split(/[\\\\/]/);
     fileName = pathParts[pathParts.length - 1];
   }
-  const unsavedIndicator = unsaved ? '● ' : '';
-  const title = path ? `${unsavedIndicator}${fileName} - workgaga` : 'workgaga';
+  const unsavedIndicator = unsaved ? "● " : "";
+  const title = path ? `${unsavedIndicator}${fileName} - workgaga` : "workgaga";
   await appWindow?.setTitle(title);
 };
 
@@ -139,9 +167,11 @@ const ensureDirectoryExists = async (path: string): Promise<void> => {
   }
 };
 
-const getDirectoryPath = (filePath: string): string => filePath.replace(/\\/g, '/').replace(/\/[^/]*$/, '');
+const getDirectoryPath = (filePath: string): string =>
+  filePath.replace(/\\/g, "/").replace(/\/[^/]*$/, "");
 
-const sanitizeFileName = (name: string): string => name.replace(/[\\/:*?"<>|]/g, '').trim();
+const sanitizeFileName = (name: string): string =>
+  name.replace(/[\\/:*?"<>|]/g, "").trim();
 
 const getMarkdownTitle = (markdown: string): string | null => {
   const heading = markdown
@@ -151,13 +181,17 @@ const getMarkdownTitle = (markdown: string): string | null => {
   return heading || null;
 };
 
-const isDraftDocumentPath = (filePath: string): boolean => /[\\/]Document[\\/]新文档-\d{8}T\d{6}\.md$/.test(filePath);
+const isDraftDocumentPath = (filePath: string): boolean =>
+  /[\\/]Document[\\/]新文档-\d{8}T\d{6}\.md$/.test(filePath);
 
-const resolveTitleFilePath = async (currentPath: string, markdown: string): Promise<string> => {
+const resolveTitleFilePath = async (
+  currentPath: string,
+  markdown: string,
+): Promise<string> => {
   if (!isDraftDocumentPath(currentPath)) return currentPath;
 
   const title = getMarkdownTitle(markdown);
-  const safeTitle = title ? sanitizeFileName(title) : '';
+  const safeTitle = title ? sanitizeFileName(title) : "";
   if (!safeTitle) return currentPath;
 
   const directoryPath = getDirectoryPath(currentPath);
@@ -171,23 +205,38 @@ const resolveTitleFilePath = async (currentPath: string, markdown: string): Prom
 };
 
 const notifyKnowledgeBaseChanged = (path: string): void => {
-  window.dispatchEvent(new CustomEvent(WINDOW_EVENTS.KNOWLEDGE_BASE_CHANGED, { detail: { path } }));
+  window.dispatchEvent(
+    new CustomEvent(WINDOW_EVENTS.KNOWLEDGE_BASE_CHANGED, { detail: { path } }),
+  );
 };
 
-const normalizeKnowledgePath = (path: string): string => path.replace(/\\/g, '/').replace(/\/+$/, '');
+const normalizeKnowledgePath = (path: string): string =>
+  path.replace(/\\/g, "/").replace(/\/+$/, "");
 
 const isCurrentKnowledgeBase = (path: string): boolean =>
-  Boolean(knowledgeGraphStore.vaultPath && normalizeKnowledgePath(knowledgeGraphStore.vaultPath) === normalizeKnowledgePath(path));
+  Boolean(
+    knowledgeGraphStore.vaultPath &&
+    normalizeKnowledgePath(knowledgeGraphStore.vaultPath) ===
+      normalizeKnowledgePath(path),
+  );
 
 const refreshKnowledgeGraphIfNeeded = (filePath: string): void => {
   const knowledgeBase = knowledgeGraphStore.knowledgeBaseForPath(filePath);
   if (!knowledgeBase || !isCurrentKnowledgeBase(knowledgeBase.path)) return;
-  window.dispatchEvent(new CustomEvent(WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED));
+  window.dispatchEvent(
+    new CustomEvent(WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED),
+  );
 };
 
 const addRecentDocument = (filePath: string): void => {
-  const knowledgeBase = knowledgeGraphStore.knowledgeBaseForPath(filePath) || knowledgeGraphStore.currentVault;
-  fileStore.addRecentFile(filePath, knowledgeBase?.path || null, knowledgeBase?.name || null);
+  const knowledgeBase =
+    knowledgeGraphStore.knowledgeBaseForPath(filePath) ||
+    knowledgeGraphStore.currentVault;
+  fileStore.addRecentFile(
+    filePath,
+    knowledgeBase?.path || null,
+    knowledgeBase?.name || null,
+  );
 };
 
 const ensureKnowledgeBaseSelected = async (): Promise<boolean> => {
@@ -206,18 +255,20 @@ const createKnowledgeDocumentPath = async (
   knowledgeBasePath = knowledgeGraphStore.vaultPath,
 ): Promise<string | null> => {
   if (!knowledgeBasePath) return null;
-  const documentPath = `${knowledgeBasePath.replace(/[\\/]+$/, '')}/Document`;
+  const documentPath = `${knowledgeBasePath.replace(/[\\/]+$/, "")}/Document`;
 
   await ensureDirectoryExists(documentPath);
   const timestamp = new Date()
     .toISOString()
-    .replace(/[-:]/g, '')
-    .replace(/\.\d{3}Z$/, '');
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}Z$/, "");
   return `${documentPath}/新文档-${timestamp}.md`;
 };
 
 // ========== 文件操作函数 ==========
-const createNewDocumentInKnowledgeBase = async (knowledgeBasePath?: string): Promise<void> => {
+const createNewDocumentInKnowledgeBase = async (
+  knowledgeBasePath?: string,
+): Promise<void> => {
   if (!(await confirmProceedWhenUnsaved())) return;
 
   if (knowledgeBasePath && !isCurrentKnowledgeBase(knowledgeBasePath)) {
@@ -227,15 +278,19 @@ const createNewDocumentInKnowledgeBase = async (knowledgeBasePath?: string): Pro
     return;
   }
 
-  const documentPath = await createKnowledgeDocumentPath(knowledgeBasePath || knowledgeGraphStore.vaultPath);
+  const documentPath = await createKnowledgeDocumentPath(
+    knowledgeBasePath || knowledgeGraphStore.vaultPath,
+  );
   if (!documentPath) return;
 
   needDealAfterChange = false;
   hasUnsavedChanges = false;
   const editor = await showEditorView();
-  editor.setMarkdown('');
+  editor.setMarkdown("");
   fileStore.setCurrentFilePath(documentPath);
-  (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = documentPath;
+  (
+    window as Window & { __WORKGAGA_CURRENT_FILE__?: string }
+  ).__WORKGAGA_CURRENT_FILE__ = documentPath;
   await updateTitle(documentPath, false);
 };
 
@@ -244,7 +299,8 @@ const newFile = async (): Promise<void> => {
 };
 
 const openFile = async (): Promise<FileOperationResult> => {
-  if (isLoading.value) return { success: false, error: DIALOGS.CANCELLED_UNSAVED };
+  if (isLoading.value)
+    return { success: false, error: DIALOGS.CANCELLED_UNSAVED };
   if (!(await confirmProceedWhenUnsaved())) {
     return { success: false, error: DIALOGS.CANCELLED_UNSAVED };
   }
@@ -256,8 +312,8 @@ const openFile = async (): Promise<FileOperationResult> => {
       directory: false,
       filters: [
         {
-          name: 'markdown',
-          extensions: ['md', 'text'],
+          name: "markdown",
+          extensions: ["md", "text"],
         },
       ],
     });
@@ -272,7 +328,9 @@ const openFile = async (): Promise<FileOperationResult> => {
     const editor = await showEditorView();
     editor.setMarkdown(markdown);
     fileStore.setCurrentFilePath(path);
-    (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
+    (
+      window as Window & { __WORKGAGA_CURRENT_FILE__?: string }
+    ).__WORKGAGA_CURRENT_FILE__ = path;
 
     // 添加到最近访问列表
     addRecentDocument(path);
@@ -282,14 +340,18 @@ const openFile = async (): Promise<FileOperationResult> => {
   } catch (error) {
     const message = `${MESSAGES.FILE.OPEN_FAILED}: ${error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR}`;
     notifyError(message);
-    return { success: false, error: error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR,
+    };
   } finally {
     isLoading.value = false;
   }
 };
 
 const saveAsNewMarkdown = async (): Promise<FileOperationResult> => {
-  if (isLoading.value) return { success: false, error: MESSAGES.FILE.USER_CANCELLED };
+  if (isLoading.value)
+    return { success: false, error: MESSAGES.FILE.USER_CANCELLED };
   isLoading.value = true;
   try {
     const editor = await ensureEditorReady();
@@ -297,8 +359,8 @@ const saveAsNewMarkdown = async (): Promise<FileOperationResult> => {
     const path = await save({
       filters: [
         {
-          name: 'workgaga',
-          extensions: ['md', 'markdown'],
+          name: "workgaga",
+          extensions: ["md", "markdown"],
         },
       ],
     });
@@ -309,7 +371,9 @@ const saveAsNewMarkdown = async (): Promise<FileOperationResult> => {
 
     await writeTextFile(path, markdown);
     fileStore.setCurrentFilePath(path);
-    (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
+    (
+      window as Window & { __WORKGAGA_CURRENT_FILE__?: string }
+    ).__WORKGAGA_CURRENT_FILE__ = path;
     addRecentDocument(path);
     fileStore.markSaved(path);
     hasUnsavedChanges = false;
@@ -321,7 +385,10 @@ const saveAsNewMarkdown = async (): Promise<FileOperationResult> => {
   } catch (error) {
     const message = `${MESSAGES.FILE.SAVE_AS_FAILED}: ${error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR}`;
     notifyError(message);
-    return { success: false, error: error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR,
+    };
   } finally {
     isLoading.value = false;
   }
@@ -348,7 +415,9 @@ const saveMarkdown = async (): Promise<FileOperationResult> => {
       fileStore.renameRecentFile(originalPath, targetPath);
       fileStore.setCurrentFilePath(targetPath);
       window.dispatchEvent(
-        new CustomEvent(WINDOW_EVENTS.DOCUMENT_RENAMED, { detail: { oldPath: originalPath, newPath: targetPath } }),
+        new CustomEvent(WINDOW_EVENTS.DOCUMENT_RENAMED, {
+          detail: { oldPath: originalPath, newPath: targetPath },
+        }),
       );
     }
 
@@ -362,22 +431,29 @@ const saveMarkdown = async (): Promise<FileOperationResult> => {
   } catch (error) {
     const message = `${MESSAGES.FILE.SAVE_FAILED}: ${error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR}`;
     notifyError(message);
-    return { success: false, error: error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR };
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : MESSAGES.UNKNOWN_ERROR,
+    };
   }
 };
 
-type EditorViewMode = 'editOnly' | 'previewOnly' | 'edit&preview';
+type EditorViewMode = "editOnly" | "previewOnly" | "edit&preview";
 
 const setEditorViewMode = async (mode: EditorViewMode): Promise<void> => {
   const editor = await ensureEditorReady();
-  editor.wrapperDom.classList.remove('markdown-preview-only');
+  editor.wrapperDom.classList.remove("markdown-preview-only");
   editor.switchModel(mode, true);
-  editor.previewer.options.enablePreviewerBubble = mode !== 'previewOnly';
+  editor.previewer.options.enablePreviewerBubble = mode !== "previewOnly";
 };
 
 const handleChangeEditorViewMode = (event: Event): void => {
   const mode = (event as CustomEvent<{ mode?: EditorViewMode }>).detail?.mode;
-  if (mode === 'editOnly' || mode === 'previewOnly' || mode === 'edit&preview') {
+  if (
+    mode === "editOnly" ||
+    mode === "previewOnly" ||
+    mode === "edit&preview"
+  ) {
     void setEditorViewMode(mode);
   }
 };
@@ -404,10 +480,10 @@ const restoreLastOpenedFile = async (): Promise<void> => {
       hasUnsavedChanges = false;
       const editor = await ensureEditorReady(false);
       editor.setMarkdown(markdown);
-      console.log('成功恢复上次打开的文件:', fileStore.currentFilePath);
+      console.log("成功恢复上次打开的文件:", fileStore.currentFilePath);
       await updateTitle(fileStore.currentFilePath, false);
     } catch (error) {
-      console.warn('恢复上次打开的文件失败:', error);
+      console.warn("恢复上次打开的文件失败:", error);
       // 如果文件不存在或无法访问，清除当前文件路径并从最近记录移除
       fileStore.removeRecentFile(fileStore.currentFilePath);
       fileStore.setCurrentFilePath(null);
@@ -418,9 +494,13 @@ const restoreLastOpenedFile = async (): Promise<void> => {
 
 // ========== 事件处理函数 ==========
 const handleSwitchMainView = (event: Event) => {
-  const view = (event as CustomEvent<{ view: 'editor' | 'dashboard' | 'ai' }>).detail?.view;
+  const view = (
+    event as CustomEvent<{
+      view: "editor" | "dashboard" | "ai" | "knowledgeGraph";
+    }>
+  ).detail?.view;
   if (!view) return;
-  if (view === 'editor') {
+  if (view === "editor") {
     void showEditorView();
     return;
   }
@@ -437,13 +517,17 @@ const openDocumentInEditor = async (path: string): Promise<boolean> => {
     const editor = await showEditorView();
     editor.setMarkdown(markdown);
     fileStore.setCurrentFilePath(path);
-  (window as Window & { __WORKGAGA_CURRENT_FILE__?: string }).__WORKGAGA_CURRENT_FILE__ = path;
-  addRecentDocument(path);
+    (
+      window as Window & { __WORKGAGA_CURRENT_FILE__?: string }
+    ).__WORKGAGA_CURRENT_FILE__ = path;
+    addRecentDocument(path);
     fileStore.markSaved(path);
     await updateTitle(path, false);
     return true;
   } catch (error) {
-    notifyError(`无法打开文档: ${error instanceof Error ? error.message : String(error)}`);
+    notifyError(
+      `无法打开文档: ${error instanceof Error ? error.message : String(error)}`,
+    );
     return false;
   }
 };
@@ -459,11 +543,17 @@ const handleOpenDocumentInEditor = async (event: Event): Promise<void> => {
   if (!path) return;
   const opened = await openDocumentInEditor(path);
   if (opened) {
-    window.dispatchEvent(new CustomEvent(`${WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR}:done`, { detail: { path } }));
+    window.dispatchEvent(
+      new CustomEvent(`${WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR}:done`, {
+        detail: { path },
+      }),
+    );
   }
 };
 
-const handleOpenFileFromSidebar = async (event: OpenFileFromSidebarEvent): Promise<void> => {
+const handleOpenFileFromSidebar = async (
+  event: OpenFileFromSidebarEvent,
+): Promise<void> => {
   const { filePath, content } = event.detail;
   if (!(await confirmProceedWhenUnsaved())) return;
   needDealAfterChange = false;
@@ -487,16 +577,19 @@ const handleCreateDocumentInKnowledgeBase = (event: Event): void => {
   void createNewDocumentInKnowledgeBase(path);
 };
 
-const renameKnowledgeBaseDocument = async (path: string, name: string): Promise<void> => {
+const renameKnowledgeBaseDocument = async (
+  path: string,
+  name: string,
+): Promise<void> => {
   if (!(await confirmProceedWhenUnsaved())) return;
 
   const safeName = sanitizeFileName(name);
   if (!safeName) {
-    notifyError('文档名称不能为空');
+    notifyError("文档名称不能为空");
     return;
   }
 
-  const extension = path.match(/\.(md|markdown)$/i)?.[0] || '.md';
+  const extension = path.match(/\.(md|markdown)$/i)?.[0] || ".md";
   const directoryPath = getDirectoryPath(path);
   let targetPath = `${directoryPath}/${safeName}${extension}`;
   let index = 2;
@@ -515,27 +608,37 @@ const renameKnowledgeBaseDocument = async (path: string, name: string): Promise<
       await updateTitle(targetPath, hasUnsavedChanges);
     }
     window.dispatchEvent(
-      new CustomEvent(WINDOW_EVENTS.DOCUMENT_RENAMED, { detail: { oldPath: path, newPath: targetPath } }),
+      new CustomEvent(WINDOW_EVENTS.DOCUMENT_RENAMED, {
+        detail: { oldPath: path, newPath: targetPath },
+      }),
     );
     refreshKnowledgeGraphIfNeeded(targetPath);
-    notifySuccess('文档已重命名');
+    notifySuccess("文档已重命名");
   } catch (error) {
-    notifyError(`重命名文档失败：${error instanceof Error ? error.message : String(error)}`);
+    notifyError(
+      `重命名文档失败：${error instanceof Error ? error.message : String(error)}`,
+    );
   }
 };
 
 const handleRenameDocumentInKnowledgeBase = (event: Event): void => {
-  const { path, name } = (event as CustomEvent<{ path?: string; name?: string }>).detail || {};
+  const { path, name } =
+    (event as CustomEvent<{ path?: string; name?: string }>).detail || {};
   if (!path || !name) return;
   void renameKnowledgeBaseDocument(path, name);
 };
 
 const handleKnowledgeGraphRefreshRequested = (): void => {
-  void knowledgeGraphStore.refresh();
+  if (knowledgeGraphRefreshTimer) clearTimeout(knowledgeGraphRefreshTimer);
+  knowledgeGraphRefreshTimer = setTimeout(() => {
+    knowledgeGraphRefreshTimer = undefined;
+    void knowledgeGraphStore.refresh();
+  }, 350);
 };
 
 const handleDocumentRenamed = (event: Event): void => {
-  const { oldPath, newPath } = (event as CustomEvent<{ oldPath?: string; newPath?: string }>).detail || {};
+  const { oldPath, newPath } =
+    (event as CustomEvent<{ oldPath?: string; newPath?: string }>).detail || {};
   if (!oldPath || !newPath || fileStore.currentFilePath !== newPath) return;
   void updateTitle(newPath, hasUnsavedChanges);
 };
@@ -546,7 +649,7 @@ const handleDocumentDeleted = (event: Event): void => {
   if (fileStore.currentFilePath === path) {
     needDealAfterChange = false;
     hasUnsavedChanges = false;
-    workgaga?.setMarkdown('');
+    workgaga?.setMarkdown("");
     fileStore.setCurrentFilePath(null);
     void updateTitle(null, false);
   }
@@ -555,32 +658,32 @@ const handleDocumentDeleted = (event: Event): void => {
 // ========== 工具栏管理 ==========
 const toggleToolbar = async (): Promise<void> => {
   const editor = await ensureEditorReady();
-  const cherryNoToolbar = document.querySelector('.cherry--no-toolbar');
+  const cherryNoToolbar = document.querySelector(".cherry--no-toolbar");
   if (appWindow) {
-    await invoke('get_show_toolbar', { show: !!cherryNoToolbar });
+    await invoke("get_show_toolbar", { show: !!cherryNoToolbar });
   }
-  editor.toolbar.toolbarHandlers.settings('toggleToolbar');
+  editor.toolbar.toolbarHandlers.settings("toggleToolbar");
 };
 
 // ========== 键盘快捷键处理 ==========
 const registerSaveShortcut = async (): Promise<void> => {
   try {
     // 注册 Ctrl+S 保存快捷键
-    await register('CommandOrControl+S', async () => {
+    await register("CommandOrControl+S", async () => {
       if (fileStore.currentFilePath || hasUnsavedChanges) {
         await saveMarkdown();
       }
     });
   } catch (error) {
-    console.warn('注册保存快捷键失败:', error);
+    console.warn("注册保存快捷键失败:", error);
   }
 };
 
 const unregisterSaveShortcut = async (): Promise<void> => {
   try {
-    await unregister('CommandOrControl+S');
+    await unregister("CommandOrControl+S");
   } catch (error) {
-    console.warn('注销保存快捷键失败:', error);
+    console.warn("注销保存快捷键失败:", error);
   }
 };
 
@@ -602,20 +705,41 @@ onMounted(async () => {
   (window as any).checkUnsavedChanges = checkUnsavedChanges;
 
   // 禁用 Tauri 默认右键菜单（防止原生“查看页面元素”）
-  document.addEventListener('contextmenu', preventNativeContextMenu);
-  window.addEventListener(WINDOW_EVENTS.CREATE_DOCUMENT_IN_KNOWLEDGE_BASE, handleCreateDocumentInKnowledgeBase);
-  window.addEventListener(WINDOW_EVENTS.RENAME_DOCUMENT_IN_KNOWLEDGE_BASE, handleRenameDocumentInKnowledgeBase);
-  window.addEventListener(WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED, handleKnowledgeGraphRefreshRequested);
-  window.addEventListener(WINDOW_EVENTS.DOCUMENT_RENAMED, handleDocumentRenamed);
-  window.addEventListener(WINDOW_EVENTS.DOCUMENT_DELETED, handleDocumentDeleted);
-  window.addEventListener('switch-main-view', handleSwitchMainView);
-  window.addEventListener('open-dashboard-link', handleOpenDashboardLink);
-  window.addEventListener(WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR, handleOpenDocumentInEditor);
-  window.addEventListener(WINDOW_EVENTS.CHANGE_EDITOR_VIEW_MODE, handleChangeEditorViewMode);
+  document.addEventListener("contextmenu", preventNativeContextMenu);
+  window.addEventListener(
+    WINDOW_EVENTS.CREATE_DOCUMENT_IN_KNOWLEDGE_BASE,
+    handleCreateDocumentInKnowledgeBase,
+  );
+  window.addEventListener(
+    WINDOW_EVENTS.RENAME_DOCUMENT_IN_KNOWLEDGE_BASE,
+    handleRenameDocumentInKnowledgeBase,
+  );
+  window.addEventListener(
+    WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED,
+    handleKnowledgeGraphRefreshRequested,
+  );
+  window.addEventListener(
+    WINDOW_EVENTS.DOCUMENT_RENAMED,
+    handleDocumentRenamed,
+  );
+  window.addEventListener(
+    WINDOW_EVENTS.DOCUMENT_DELETED,
+    handleDocumentDeleted,
+  );
+  window.addEventListener("switch-main-view", handleSwitchMainView);
+  window.addEventListener("open-dashboard-link", handleOpenDashboardLink);
+  window.addEventListener(
+    WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR,
+    handleOpenDocumentInEditor,
+  );
+  window.addEventListener(
+    WINDOW_EVENTS.CHANGE_EDITOR_VIEW_MODE,
+    handleChangeEditorViewMode,
+  );
 
   // 初始化工具栏状态
   if (appWindow) {
-    await invoke('get_show_toolbar', { show: true });
+    await invoke("get_show_toolbar", { show: true });
   }
   appEvents.registerWindowEvents();
   if (appWindow) {
@@ -640,16 +764,38 @@ onMounted(async () => {
 });
 
 onUnmounted(async () => {
-  document.removeEventListener('contextmenu', preventNativeContextMenu);
-  window.removeEventListener(WINDOW_EVENTS.CREATE_DOCUMENT_IN_KNOWLEDGE_BASE, handleCreateDocumentInKnowledgeBase);
-  window.removeEventListener(WINDOW_EVENTS.RENAME_DOCUMENT_IN_KNOWLEDGE_BASE, handleRenameDocumentInKnowledgeBase);
-  window.removeEventListener(WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED, handleKnowledgeGraphRefreshRequested);
-  window.removeEventListener(WINDOW_EVENTS.DOCUMENT_RENAMED, handleDocumentRenamed);
-  window.removeEventListener(WINDOW_EVENTS.DOCUMENT_DELETED, handleDocumentDeleted);
-  window.removeEventListener(WINDOW_EVENTS.CHANGE_EDITOR_VIEW_MODE, handleChangeEditorViewMode);
-  window.removeEventListener(WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR, handleOpenDocumentInEditor);
-  window.removeEventListener('switch-main-view', handleSwitchMainView);
-  window.removeEventListener('open-dashboard-link', handleOpenDashboardLink);
+  if (knowledgeGraphRefreshTimer) clearTimeout(knowledgeGraphRefreshTimer);
+  document.removeEventListener("contextmenu", preventNativeContextMenu);
+  window.removeEventListener(
+    WINDOW_EVENTS.CREATE_DOCUMENT_IN_KNOWLEDGE_BASE,
+    handleCreateDocumentInKnowledgeBase,
+  );
+  window.removeEventListener(
+    WINDOW_EVENTS.RENAME_DOCUMENT_IN_KNOWLEDGE_BASE,
+    handleRenameDocumentInKnowledgeBase,
+  );
+  window.removeEventListener(
+    WINDOW_EVENTS.KNOWLEDGE_GRAPH_REFRESH_REQUESTED,
+    handleKnowledgeGraphRefreshRequested,
+  );
+  window.removeEventListener(
+    WINDOW_EVENTS.DOCUMENT_RENAMED,
+    handleDocumentRenamed,
+  );
+  window.removeEventListener(
+    WINDOW_EVENTS.DOCUMENT_DELETED,
+    handleDocumentDeleted,
+  );
+  window.removeEventListener(
+    WINDOW_EVENTS.CHANGE_EDITOR_VIEW_MODE,
+    handleChangeEditorViewMode,
+  );
+  window.removeEventListener(
+    WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR,
+    handleOpenDocumentInEditor,
+  );
+  window.removeEventListener("switch-main-view", handleSwitchMainView);
+  window.removeEventListener("open-dashboard-link", handleOpenDashboardLink);
   if (unlistenCloseRequested) {
     unlistenCloseRequested();
   }
@@ -669,9 +815,16 @@ onUnmounted(async () => {
       </div>
       <Dashboard v-if="activeMainView === 'dashboard'" class="dashboard-view" />
       <AIAssistantPage v-if="activeMainView === 'ai'" class="ai-main-view" />
+      <KnowledgeGraphWorkspace
+        v-if="activeMainView === 'knowledgeGraph'"
+        class="knowledge-graph-main-view"
+      />
     </div>
     <ToastContainer />
-    <UnsavedChangesDialog :visible="showUnsavedDialog" @close="handleUnsavedDialogClose" />
+    <UnsavedChangesDialog
+      :visible="showUnsavedDialog"
+      @close="handleUnsavedDialogClose"
+    />
   </div>
 </template>
 
@@ -709,7 +862,8 @@ onUnmounted(async () => {
 }
 
 .dashboard-view,
-.ai-main-view {
+.ai-main-view,
+.knowledge-graph-main-view {
   position: absolute;
   inset: 0;
   z-index: 1;

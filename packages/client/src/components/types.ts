@@ -15,7 +15,7 @@ export interface FileInfo {
 export interface DirectoryNode {
   path: string;
   name: string;
-  type: 'file' | 'directory';
+  type: "file" | "directory";
   expanded?: boolean;
   children?: DirectoryNode[];
   lastModified?: number;
@@ -87,18 +87,18 @@ export interface DialogOptions {
 
 // 文件管理器事件类型
 export interface FileManagerEvents {
-  'open-file': (filePath: string, fromDirectoryManager: boolean) => void;
-  'create-file': (filePath: string) => void;
-  'delete-file': (filePath: string) => void;
-  'rename-file': (oldPath: string, newPath: string) => void;
-  'toggle-sidebar': (collapsed: boolean) => void;
+  "open-file": (filePath: string, fromDirectoryManager: boolean) => void;
+  "create-file": (filePath: string) => void;
+  "delete-file": (filePath: string) => void;
+  "rename-file": (oldPath: string, newPath: string) => void;
+  "toggle-sidebar": (collapsed: boolean) => void;
 }
 
 // 目录管理器事件类型
 export interface DirectoryManagerEvents {
-  'toggle-directory': (dirPath: string, node: DirectoryNode) => void;
-  'open-file': (filePath: string) => void;
-  'refresh-directories': () => void;
+  "toggle-directory": (dirPath: string, node: DirectoryNode) => void;
+  "open-file": (filePath: string) => void;
+  "refresh-directories": () => void;
 }
 
 // 文件存储接口类型
@@ -111,7 +111,11 @@ export interface FileStore {
 
   toggleSidebar(): void;
   setCurrentFilePath(filePath: string): void;
-  addRecentFile(filePath: string, knowledgeBasePath?: string | null, knowledgeBaseName?: string | null): void;
+  addRecentFile(
+    filePath: string,
+    knowledgeBasePath?: string | null,
+    knowledgeBaseName?: string | null,
+  ): void;
   removeRecentFile(filePath: string): void;
 }
 
@@ -134,8 +138,20 @@ export interface KnowledgeNote {
   relativePath: string;
   title: string;
   content: string;
+  size?: number;
+  mtime?: number;
   aliases?: string[];
+  headings?: KnowledgeNoteHeading[];
+  tags?: string[];
 }
+
+export interface KnowledgeNoteHeading {
+  id: string;
+  text: string;
+  level: number;
+}
+
+export type KnowledgeGraphNodeCategory = "note" | "missing" | "heading" | "tag";
 
 export interface KnowledgeGraphNode {
   id: string;
@@ -143,13 +159,20 @@ export interface KnowledgeGraphNode {
   path?: string;
   relativePath?: string;
   exists: boolean;
-  category?: 'note' | 'missing';
+  category?: KnowledgeGraphNodeCategory;
+  level?: number;
 }
+
+export type KnowledgeGraphLinkType =
+  | "wiki"
+  | "markdown"
+  | "contains"
+  | "tagged_with";
 
 export interface KnowledgeGraphLink {
   source: string;
   target: string;
-  type: 'wiki' | 'markdown';
+  type: KnowledgeGraphLinkType;
   raw: string;
 }
 
@@ -158,6 +181,18 @@ export interface KnowledgeGraphData {
   links: KnowledgeGraphLink[];
   notes?: KnowledgeNote[];
   indexedAt: number;
+  indexStats?: KnowledgeGraphIndexStats;
+}
+
+export interface KnowledgeGraphIndexStats {
+  totalFiles: number;
+  changedFiles: number;
+  unchangedFiles: number;
+  deletedFiles: number;
+  failedFiles: number;
+  warnings: string[];
+  durationMs: number;
+  mode: "full" | "incremental";
 }
 
 // 常量定义统一从 constants 中导出
@@ -166,4 +201,4 @@ export {
   MAX_RECENT_FILES,
   MAX_DIRECTORY_DEPTH,
   DEFAULT_FILE_CONTENT,
-} from '../constants/files';
+} from "../constants/files";

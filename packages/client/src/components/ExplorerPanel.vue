@@ -4,108 +4,69 @@
       <div class="empty-title">还没有打开知识库</div>
       <p>选择一个本地目录作为知识库，系统会自动识别其中的 Markdown 文档。</p>
       <button class="primary-action" @click="openKnowledgeBase">打开知识库</button>
-
-      <section v-if="knowledgeGraphStore.vaults.length" class="section-block vault-list-section">
-        <div class="section-header">
-          <h4>已添加知识库</h4>
-          <span>{{ knowledgeGraphStore.vaults.length }} 个</span>
-        </div>
-        <ul class="vault-list">
-          <li v-for="vault in knowledgeGraphStore.vaults" :key="vault.path" class="vault-item">
-            <button class="vault-switch" :title="vault.path" @click="switchKnowledgeBase(vault.path)">
-              <strong>{{ vault.name }}</strong>
-              <span>{{ vault.path }}</span>
-            </button>
-            <button class="remove-button" title="移除记录" @click="removeKnowledgeBase(vault.path)">移除</button>
-          </li>
-        </ul>
+      <section v-if="knowledgeGraphStore.vaults.length" class="other-vaults">
+        <div class="other-vaults-title">其他知识库 · {{ knowledgeGraphStore.vaults.length }} 个</div>
+        <button v-for="vault in knowledgeGraphStore.vaults" :key="vault.path" class="collapsed-vault" @click="switchKnowledgeBase(vault.path)">
+          <span>▶ {{ vault.name }}</span><small>{{ vaultDocumentCount(vault.path) }} 篇</small>
+        </button>
       </section>
     </div>
 
     <template v-else>
-      <section class="vault-card">
-        <div class="vault-heading">
-          <div>
-            <div class="vault-label">当前知识库</div>
-            <h4>{{ knowledgeGraphStore.vaultName }}</h4>
-          </div>
-          <span v-if="knowledgeGraphStore.loading" class="status-pill">索引中</span>
-        </div>
-        <div class="vault-path" :title="knowledgeGraphStore.vaultPath">{{ knowledgeGraphStore.vaultPath }}</div>
-        <div class="stats-grid">
-          <div>
-            <strong>{{ knowledgeGraphStore.noteCount }}</strong>
-            <span>文档</span>
-          </div>
-          <div>
-            <strong>{{ knowledgeGraphStore.linkCount }}</strong>
-            <span>连接</span>
-          </div>
-          <div>
-            <strong>{{ knowledgeGraphStore.missingCount }}</strong>
-            <span>缺失</span>
-          </div>
-        </div>
-        <div class="indexed-time">{{ indexedTimeText }}</div>
+      <section class="current-vault">
+        <button class="vault-heading" :title="knowledgeGraphStore.vaultPath" @click="documentsExpanded = !documentsExpanded">
+          <span class="expand-icon">{{ documentsExpanded ? '▼' : '▶' }}</span>
+          <span class="vault-name">{{ knowledgeGraphStore.vaultName }}</span>
+          <span v-if="knowledgeGraphStore.loading" class="status-pill">同步中</span>
+        </button>
+        <div class="vault-meta">{{ documentNodes.length }} 篇文档 · {{ indexedTimeText }}</div>
       </section>
 
-      <section class="action-row">
-        <button @click="createDocument">新建文档</button>
-        <button :disabled="knowledgeGraphStore.loading" @click="refreshKnowledgeBase">刷新索引</button>
-        <button @click="openKnowledgeBase">切换知识库</button>
-      </section>
-
-      <p v-if="knowledgeGraphStore.error" class="error-message">{{ knowledgeGraphStore.error }}</p>
-
-      <section class="section-block document-section">
-        <div class="section-header">
-          <h4>知识库文档</h4>
-          <span>{{ documentNodes.length }} 篇</span>
+      <section v-if="documentsExpanded" class="document-section">
+        <div class="document-toolbar">
+          <span>文档</span>
+          <button class="new-document-button" @click="createDocument">+ 新建</button>
         </div>
-        <div v-if="documentTree.length === 0" class="muted">暂无 Markdown 文档。</div>
+        <p v-if="knowledgeGraphStore.error" class="error-message">{{ knowledgeGraphStore.error }}</p>
+        <div v-if="documentTree.length === 0" class="muted">暂无 Markdown 文档</div>
         <ul v-else class="tree-list">
           <li v-for="row in documentRows" :key="row.path" class="tree-item">
-            <button
-              class="tree-node-button"
-              :class="{ directory: row.isDirectory }"
-              :style="{ paddingLeft: `${row.depth * 14 + 4}px` }"
-              :title="row.filePath || row.path"
-              @click="row.filePath && openDocument(row.filePath)"
-            >
-              {{ row.isDirectory ? `${row.name}/` : row.name }}
-            </button>
+            <div class="tree-row" :class="{ directory: row.isDirectory, current: isCurrentDocument(row.filePath) }" :style="{ paddingLeft: `${row.depth * 14 + 4}px` }">
+              <button class="tree-node-button" :title="row.filePath || row.path" @click="row.filePath && openDocument(row.filePath)">
+                <span class="node-icon">{{ row.isDirectory ? (row.expanded ? '▼' : '▶') : 'MD' }}</span>
+                <span class="node-name">{{ row.isDirectory ? row.name : row.name }}</span>
+              </button>
+              <button v-if="row.filePath" class="more-button" title="文档操作" @click.stop="toggleDocumentMenu(row.filePath)">⋯</button>
+              <div v-if="activeMenuPath === row.filePath" class="document-menu">
+                <button @click="beginRename(row.filePath, row.name)">重命名</button>
+                <button class="danger-text" @click="deleteDocument(row.filePath, row.name)">删除</button>
+              </div>
+            </div>
+            <div v-if="renamingPath === row.filePath" class="rename-row" :style="{ paddingLeft: `${row.depth * 14 + 28}px` }">
+              <input ref="renameInput" v-model="renameValue" autofocus @keyup.enter="submitRename(row.filePath)" @keyup.esc="cancelRename" />
+              <button title="保存" @click="submitRename(row.filePath)">✓</button>
+              <button title="取消" @click="cancelRename">×</button>
+              <small v-if="renameError">{{ renameError }}</small>
+            </div>
           </li>
         </ul>
       </section>
 
-      <section v-if="knowledgeGraphStore.vaults.length" class="section-block vault-list-section">
-        <div class="section-header">
-          <h4>已添加知识库</h4>
-          <button class="link-button" @click="closeKnowledgeBase">关闭当前</button>
-        </div>
-        <ul class="vault-list">
-          <li
-            v-for="vault in knowledgeGraphStore.vaults"
-            :key="vault.path"
-            class="vault-item"
-            :class="{ active: isCurrentVault(vault.path) }"
-          >
-            <button class="vault-switch" :title="vault.path" @click="switchKnowledgeBase(vault.path)">
-              <strong>{{ vault.name }}</strong>
-              <span>{{ vault.path }}</span>
-            </button>
-            <button class="remove-button" title="移除记录" @click="removeKnowledgeBase(vault.path)">移除</button>
-          </li>
-        </ul>
+      <section v-if="otherVaults.length" class="other-vaults">
+        <div class="other-vaults-title">其他知识库 · {{ otherVaults.length }} 个</div>
+        <button v-for="vault in otherVaults" :key="vault.path" class="collapsed-vault" :title="vault.path" @click="switchKnowledgeBase(vault.path)">
+          <span>▶ {{ vault.name }}</span><small>{{ vaultDocumentCount(vault.path) }} 篇</small>
+        </button>
       </section>
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
+import { exists, remove, rename } from '@tauri-apps/plugin-fs';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useKnowledgeGraphStore } from '../store';
+import { useFileStore, useKnowledgeGraphStore } from '../store';
 import { WINDOW_EVENTS } from '../constants/events';
 import { notifyError, notifySuccess } from '../utils/notifications';
 import type { KnowledgeGraphNode } from './types';
@@ -115,6 +76,7 @@ interface TreeNode {
   path: string;
   filePath?: string;
   children: TreeNode[];
+  expanded?: boolean;
 }
 
 interface TreeRow extends TreeNode {
@@ -123,6 +85,12 @@ interface TreeRow extends TreeNode {
 }
 
 const knowledgeGraphStore = useKnowledgeGraphStore();
+const fileStore = useFileStore();
+const documentsExpanded = ref(true);
+const activeMenuPath = ref<string | null>(null);
+const renamingPath = ref<string | null>(null);
+const renameValue = ref('');
+const renameError = ref('');
 
 const normalizePath = (path: string): string => path.replace(/\\/g, '/');
 
@@ -131,13 +99,31 @@ const formatTime = (time?: number | null): string => {
   return `最近索引：${new Date(time).toLocaleString()}`;
 };
 
-const documentNodes = computed(() =>
-  (knowledgeGraphStore.graphData?.nodes || [])
+const currentGraph = computed(() => {
+  const currentPath = knowledgeGraphStore.vaultPath;
+  if (!currentPath) return knowledgeGraphStore.graphData;
+  const graphEntry = Object.entries(knowledgeGraphStore.graphByVault).find(
+    ([path]) => normalizePath(path) === normalizePath(currentPath),
+  );
+  return graphEntry?.[1] || knowledgeGraphStore.graphData;
+});
+
+const documentNodes = computed(() => {
+  const uniqueNodes = new Map<string, KnowledgeGraphNode & { path: string; relativePath: string }>();
+
+  (currentGraph.value?.nodes || [])
     .filter((node): node is KnowledgeGraphNode & { path: string; relativePath: string } =>
       Boolean(node.exists && node.path && node.relativePath),
     )
-    .sort((a, b) => normalizePath(a.relativePath).localeCompare(normalizePath(b.relativePath), 'zh-CN')),
-);
+    .forEach((node) => {
+      const normalizedPath = normalizePath(node.path).toLowerCase();
+      if (!uniqueNodes.has(normalizedPath)) uniqueNodes.set(normalizedPath, node);
+    });
+
+  return [...uniqueNodes.values()].sort((a, b) =>
+    normalizePath(a.relativePath).localeCompare(normalizePath(b.relativePath), 'zh-CN'),
+  );
+});
 
 const documentTree = computed<TreeNode[]>(() => {
   const roots: TreeNode[] = [];
@@ -180,7 +166,25 @@ const documentTree = computed<TreeNode[]>(() => {
   return sortTree(roots);
 });
 
-const indexedTimeText = computed(() => formatTime(knowledgeGraphStore.lastIndexedAt));
+const indexedTimeText = computed(() => formatTime(knowledgeGraphStore.lastIndexedAt).replace('最近索引：', ''));
+const otherVaults = computed(() =>
+  knowledgeGraphStore.vaults.filter((vault) => !isCurrentVault(vault.path)),
+);
+
+const vaultDocumentCount = (path: string): number => {
+  const graphEntry = Object.entries(knowledgeGraphStore.graphByVault).find(
+    ([graphPath]) => normalizePath(graphPath) === normalizePath(path),
+  );
+  const uniquePaths = new Set(
+    (graphEntry?.[1]?.nodes || [])
+      .filter((node) => node.exists && node.path)
+      .map((node) => normalizePath(node.path!).toLowerCase()),
+  );
+  return uniquePaths.size;
+};
+
+const isCurrentDocument = (path?: string): boolean =>
+  Boolean(path && fileStore.currentFilePath && normalizePath(path) === normalizePath(fileStore.currentFilePath));
 
 const documentRows = computed<TreeRow[]>(() => {
   const rows: TreeRow[] = [];
@@ -213,10 +217,6 @@ const openKnowledgeBase = async (): Promise<void> => {
   }
 };
 
-const refreshKnowledgeBase = async (): Promise<void> => {
-  await knowledgeGraphStore.refresh();
-};
-
 const createDocument = (): void => {
   if (!knowledgeGraphStore.vaultPath) return;
   window.dispatchEvent(
@@ -227,22 +227,97 @@ const createDocument = (): void => {
 };
 
 const openDocument = (path: string): void => {
+  activeMenuPath.value = null;
   window.dispatchEvent(new CustomEvent('open-dashboard-link', { detail: { path } }));
 };
 
+const toggleDocumentMenu = (path: string): void => {
+  activeMenuPath.value = activeMenuPath.value === path ? null : path;
+};
+
+const beginRename = async (path: string, name: string): Promise<void> => {
+  activeMenuPath.value = null;
+  renamingPath.value = path;
+  renameValue.value = name.replace(/\.(md|markdown)$/i, '');
+  renameError.value = '';
+  await nextTick();
+};
+
+const cancelRename = (): void => {
+  renamingPath.value = null;
+  renameValue.value = '';
+  renameError.value = '';
+};
+
+const submitRename = async (path: string): Promise<void> => {
+  const value = renameValue.value.trim();
+  if (!value) {
+    renameError.value = '名称不能为空';
+    return;
+  }
+  if (/[\\/:*?"<>|]/.test(value)) {
+    renameError.value = '名称不能包含特殊字符';
+    return;
+  }
+  const extension = path.match(/\.(md|markdown)$/i)?.[0] || '.md';
+  const directory = path.replace(/[\\/]([^\\/]*)$/, '');
+  const targetPath = `${directory}/${value}${extension}`;
+  if (targetPath !== path && await exists(targetPath)) {
+    renameError.value = '该目录下已存在同名文档';
+    return;
+  }
+  if (targetPath === path) {
+    cancelRename();
+    return;
+  }
+  try {
+    await rename(path, targetPath);
+    fileStore.renameRecentFile(path, targetPath);
+    window.dispatchEvent(new CustomEvent(WINDOW_EVENTS.DOCUMENT_RENAMED, { detail: { oldPath: path, newPath: targetPath } }));
+    cancelRename();
+    await knowledgeGraphStore.refresh();
+    notifySuccess('文档已重命名');
+  } catch (error) {
+    renameError.value = `重命名失败：${error instanceof Error ? error.message : String(error)}`;
+  }
+};
+
+const deleteDocument = async (path: string, name: string): Promise<void> => {
+  activeMenuPath.value = null;
+  if (!window.confirm(`确定要删除“${name}”吗？\\n\\n文档将从当前知识库中删除，此操作无法撤销。`)) return;
+  try {
+    await remove(path);
+    fileStore.removeRecentFile(path);
+    window.dispatchEvent(new CustomEvent(WINDOW_EVENTS.DOCUMENT_DELETED, { detail: { path } }));
+    await knowledgeGraphStore.refresh();
+    notifySuccess('文档已删除');
+  } catch (error) {
+    notifyError(`删除文档失败：${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
 const switchKnowledgeBase = async (path: string): Promise<void> => {
-  if (isCurrentVault(path)) return;
-  await knowledgeGraphStore.switchKnowledgeBase(path);
-  notifyKnowledgeBaseChanged(path);
+  if (!path) return;
+  activeMenuPath.value = null;
+  renamingPath.value = null;
+  documentsExpanded.value = true;
+  try {
+    await knowledgeGraphStore.switchKnowledgeBase(path);
+    documentsExpanded.value = true;
+    notifyKnowledgeBaseChanged(path);
+  } catch (error) {
+    notifyError(`切换知识库失败：${error instanceof Error ? error.message : String(error)}`);
+  }
 };
 
-const removeKnowledgeBase = (path: string): void => {
-  knowledgeGraphStore.removeKnowledgeBase(path);
-};
-
-const closeKnowledgeBase = (): void => {
-  knowledgeGraphStore.closeKnowledgeBase();
-};
+watch(
+  () => knowledgeGraphStore.vaultPath,
+  () => {
+    documentsExpanded.value = true;
+    activeMenuPath.value = null;
+    renamingPath.value = null;
+  },
+);
 
 const isCurrentVault = (path: string): boolean =>
   Boolean(knowledgeGraphStore.vaultPath && normalizePath(knowledgeGraphStore.vaultPath) === normalizePath(path));
@@ -251,6 +326,185 @@ defineExpose({ openKnowledgeBase });
 </script>
 
 <style scoped>
+.current-vault {
+  margin-bottom: 12px;
+}
+
+.vault-heading {
+  width: 100%;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: #111827;
+  cursor: pointer;
+  text-align: left;
+}
+
+.expand-icon {
+  display: inline-block;
+  width: 18px;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.vault-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.vault-meta {
+  margin: 5px 0 0 18px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.document-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.new-document-button,
+.more-button,
+.document-menu button,
+.rename-row button {
+  border: 1px solid #d8dee9;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.new-document-button {
+  padding: 5px 8px;
+}
+
+.tree-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.tree-row.current {
+  background: #eef2ff;
+}
+
+.tree-row.directory .tree-node-button {
+  color: #111827;
+  font-weight: 600;
+}
+
+.more-button {
+  flex: 0 0 auto;
+  border: none;
+  padding: 2px 6px;
+  background: transparent;
+  font-size: 16px;
+}
+
+.more-button:hover,
+.new-document-button:hover {
+  background: #eef2ff;
+  color: #1d4ed8;
+}
+
+.document-menu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% - 2px);
+  right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 76px;
+  padding: 4px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 12%);
+}
+
+.document-menu button {
+  border: none;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.document-menu button:hover {
+  background: #f3f4f6;
+}
+
+.danger-text {
+  color: #dc2626 !important;
+}
+
+.rename-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 2px 0;
+}
+
+.rename-row input {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid #93c5fd;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+
+.rename-row button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+
+.rename-row small {
+  color: #dc2626;
+  font-size: 11px;
+}
+
+.other-vaults {
+  margin-top: 18px;
+}
+
+.other-vaults-title {
+  margin-bottom: 6px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.collapsed-vault {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 3px 0;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 8px;
+  background: transparent;
+  color: #374151;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.collapsed-vault:hover {
+  background: #f3f4f6;
+}
+
+.collapsed-vault small {
+  color: #6b7280;
+}
+
 .explorer-panel {
   height: 100%;
   padding: 14px;

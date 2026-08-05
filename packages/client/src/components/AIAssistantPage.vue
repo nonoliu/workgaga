@@ -4,7 +4,9 @@
       <div>
         <div class="eyebrow">workgaga AI</div>
         <h1>AI 助手</h1>
-        <p>围绕你要推进的事情工作，必要时自然生成文档、待办、日程和知识沉淀。</p>
+        <p>
+          围绕你要推进的事情工作，必要时自然生成文档、待办、日程和知识沉淀。
+        </p>
       </div>
       <div class="header-stats">
         <div>
@@ -24,7 +26,7 @@
           ><span>Agent</span>
         </div>
         <div>
-          <strong>{{ activeChannel?.model ?? '未设置' }}</strong
+          <strong>{{ activeChannel?.model ?? "未设置" }}</strong
           ><span>当前渠道模型</span>
         </div>
       </div>
@@ -38,7 +40,8 @@
             <span>当前文档</span><strong>{{ currentFileName }}</strong>
           </div>
           <div class="meta-row">
-            <span>当前知识库</span><strong>{{ knowledgeGraphStore.vaultName || '未打开' }}</strong>
+            <span>当前知识库</span
+            ><strong>{{ knowledgeGraphStore.vaultName || "未打开" }}</strong>
           </div>
           <div class="mini-grid">
             <div>
@@ -58,7 +61,12 @@
 
         <section class="card">
           <div class="section-title">快捷能力</div>
-          <button v-for="action in quickActions" :key="action" class="quick-btn" @click="useQuickAction(action)">
+          <button
+            v-for="action in quickActions"
+            :key="action"
+            class="quick-btn"
+            @click="useQuickAction(action)"
+          >
             {{ action }}
           </button>
         </section>
@@ -72,7 +80,9 @@
             <button @click="activeTab = 'skills'">管理</button>
           </div>
           <div class="chip-list">
-            <span v-for="skill in enabledSkills.slice(0, 5)" :key="skill.id">{{ skill.name }}</span>
+            <span v-for="skill in enabledSkills.slice(0, 5)" :key="skill.id">{{
+              skill.name
+            }}</span>
           </div>
         </section>
 
@@ -85,7 +95,9 @@
             <button @click="activeTab = 'agents'">管理</button>
           </div>
           <div class="chip-list">
-            <span v-for="agent in enabledAgents.slice(0, 5)" :key="agent.id">{{ agent.name }}</span>
+            <span v-for="agent in enabledAgents.slice(0, 5)" :key="agent.id">{{
+              agent.name
+            }}</span>
           </div>
         </section>
       </aside>
@@ -102,15 +114,22 @@
           </button>
         </nav>
 
-        <section v-if="activeTab === 'chat'" class="panel-section chat-workbench">
+        <section
+          v-if="activeTab === 'chat'"
+          class="panel-section chat-workbench"
+        >
           <aside class="conversation-history-panel">
             <div class="conversation-panel-head">
               <div>
                 <div class="section-title">历史会话</div>
                 <p>选择一个任务继续对话，或新建一个任务。</p>
               </div>
-              <button class="primary-btn compact-btn" type="button" @click="showNewTaskPanel = !showNewTaskPanel">
-                {{ showNewTaskPanel ? '收起' : '新建' }}
+              <button
+                class="primary-btn compact-btn"
+                type="button"
+                @click="showNewTaskPanel = !showNewTaskPanel"
+              >
+                {{ showNewTaskPanel ? "收起" : "新建" }}
               </button>
             </div>
 
@@ -124,7 +143,11 @@
               <label>
                 <span>本次大模型</span>
                 <select v-model="selectedDirectChannelId">
-                  <option v-for="channel in channels" :key="channel.id" :value="channel.id">
+                  <option
+                    v-for="channel in channels"
+                    :key="channel.id"
+                    :value="channel.id"
+                  >
                     {{ channelOptionLabel(channel) }}
                   </option>
                 </select>
@@ -141,16 +164,20 @@
                 >
                   {{ skill.name }}
                 </button>
-                <span v-if="!enabledSkills.length" class="send-skill-empty">暂无可用 Skill</span>
+                <span v-if="!enabledSkills.length" class="send-skill-empty"
+                  >暂无可用 Skill</span
+                >
               </div>
               <button
                 class="primary-btn full-btn"
                 :disabled="!userInput.trim() || sendingDirectly"
                 @click="sendDirectPrompt"
               >
-                {{ sendingDirectly ? '创建并发送中...' : '创建新对话' }}
+                {{ sendingDirectly ? "创建并发送中..." : "创建新对话" }}
               </button>
-              <div v-if="directSendError" class="conversation-error">{{ directSendError }}</div>
+              <div v-if="directSendError" class="conversation-error">
+                {{ directSendError }}
+              </div>
             </div>
 
             <div class="conversation-list">
@@ -166,10 +193,16 @@
                 <span>{{ task.progressText }}</span>
                 <small
                   >{{ statusText(task.status) }} ·
-                  {{ task.outputKinds.map(outputKindText).join('、') || '直接回答' }}</small
+                  {{
+                    task.outputKinds.map(outputKindText).join("、") ||
+                    "直接回答"
+                  }}</small
                 >
               </button>
-              <div v-if="!sortedTasks.length" class="conversation-empty compact-empty">
+              <div
+                v-if="!sortedTasks.length"
+                class="conversation-empty compact-empty"
+              >
                 还没有历史会话，点击“新建”开始第一个任务。
               </div>
             </div>
@@ -183,24 +216,46 @@
                   <h2>{{ selectedTask.title }}</h2>
                   <p>{{ selectedTask.progressText }}</p>
                 </div>
-                <span class="status" :class="selectedTask.status">{{ statusText(selectedTask.status) }}</span>
+                <span class="status" :class="selectedTask.status">{{
+                  statusText(selectedTask.status)
+                }}</span>
               </div>
 
               <div class="conversation-area focused-conversation-area">
                 <div class="conversation-messages focused-messages">
-                  <div v-if="!conversationMessages.length" class="conversation-empty">
+                  <div
+                    v-if="!conversationMessages.length"
+                    class="conversation-empty"
+                  >
                     还没有对话记录，在底部输入框继续与 AI 协作。
                   </div>
                   <div
-                    v-if="conversationMessages.length > conversationCompressThreshold"
+                    v-if="
+                      conversationMessages.length >
+                      conversationCompressThreshold
+                    "
                     class="conversation-compressed-hint"
                   >
-                    早期 {{ conversationMessages.length - conversationKeepRecent }} 条消息已压缩，仅展示最近
-                    {{ Math.min(conversationMessages.length, conversationKeepRecent) }} 条。
-                    <span v-if="conversationSummaryStatus === 'generating'" class="summary-status generating"
+                    早期
+                    {{
+                      conversationMessages.length - conversationKeepRecent
+                    }}
+                    条消息已压缩，仅展示最近
+                    {{
+                      Math.min(
+                        conversationMessages.length,
+                        conversationKeepRecent,
+                      )
+                    }}
+                    条。
+                    <span
+                      v-if="conversationSummaryStatus === 'generating'"
+                      class="summary-status generating"
                       >正在生成智能摘要...</span
                     >
-                    <span v-else-if="conversationSummaryStatus === 'ready'" class="summary-status ready"
+                    <span
+                      v-else-if="conversationSummaryStatus === 'ready'"
+                      class="summary-status ready"
                       >智能摘要已就绪</span
                     >
                   </div>
@@ -211,17 +266,25 @@
                     :class="[message.role, message.status]"
                   >
                     <div class="conversation-meta">
-                      <strong>{{ message.role === 'assistant' ? 'AI' : '你' }}</strong>
+                      <strong>{{
+                        message.role === "assistant" ? "AI" : "你"
+                      }}</strong>
                       <span>{{
-                        message.status === 'sending' || message.status === 'streaming'
-                          ? '生成中...'
-                          : message.status === 'failed'
-                            ? '发送失败'
-                            : '已完成'
+                        message.status === "sending" ||
+                        message.status === "streaming"
+                          ? "生成中..."
+                          : message.status === "failed"
+                            ? "发送失败"
+                            : "已完成"
                       }}</span>
-                      <small v-if="message.createdAt">{{ formatTestTime(message.createdAt) }}</small>
+                      <small v-if="message.createdAt">{{
+                        formatTestTime(message.createdAt)
+                      }}</small>
                     </div>
-                    <div v-if="message.timeline?.length" class="run-timeline-list">
+                    <div
+                      v-if="message.timeline?.length"
+                      class="run-timeline-list"
+                    >
                       <div
                         v-for="step in message.timeline"
                         :key="step.id"
@@ -235,24 +298,41 @@
                         </div>
                       </div>
                     </div>
-                    <div v-if="message.toolEvents?.length" class="tool-event-list">
+                    <div
+                      v-if="message.toolEvents?.length"
+                      class="tool-event-list"
+                    >
                       <div
                         v-for="event in message.toolEvents"
                         :key="event.id"
                         class="tool-event-item"
                         :class="event.type"
                       >
-                        <span class="tool-event-type">{{ toolEventTypeText(event.type) }}</span>
-                        <strong v-if="event.toolName">{{ event.toolName }}</strong>
+                        <span class="tool-event-type">{{
+                          toolEventTypeText(event.type)
+                        }}</span>
+                        <strong v-if="event.toolName">{{
+                          event.toolName
+                        }}</strong>
                         <span>{{ event.message }}</span>
                       </div>
                     </div>
-                    <div class="conversation-content">{{ message.content || '正在生成内容...' }}</div>
+                    <div class="conversation-content">
+                      {{ message.content || "正在生成内容..." }}
+                    </div>
                     <div
-                      v-if="message.role === 'assistant' && message.status === 'failed'"
+                      v-if="
+                        message.role === 'assistant' &&
+                        message.status === 'failed'
+                      "
                       class="conversation-actions"
                     >
-                      <button type="button" @click="retryAssistantMessage(message.id)">重新生成</button>
+                      <button
+                        type="button"
+                        @click="retryAssistantMessage(message.id)"
+                      >
+                        重新生成
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -261,7 +341,11 @@
                     <label>
                       <span>本次 LLM</span>
                       <select v-model="selectedConversationChannelId">
-                        <option v-for="channel in channels" :key="channel.id" :value="channel.id">
+                        <option
+                          v-for="channel in channels"
+                          :key="channel.id"
+                          :value="channel.id"
+                        >
                           {{ channelOptionLabel(channel) }}
                         </option>
                       </select>
@@ -270,25 +354,35 @@
                       <span>本次 Agent</span>
                       <select v-model="selectedConversationAgentId">
                         <option value="">不使用 Agent</option>
-                        <option v-for="agent in enabledAgents" :key="agent.id" :value="agent.id">
+                        <option
+                          v-for="agent in enabledAgents"
+                          :key="agent.id"
+                          :value="agent.id"
+                        >
                           {{ agent.name }}
                         </option>
                       </select>
                     </label>
                   </div>
-                  <div class="send-skill-picker compact-skill-picker current-send-skills">
+                  <div
+                    class="send-skill-picker compact-skill-picker current-send-skills"
+                  >
                     <span class="send-skill-label">本次 Skill：</span>
                     <button
                       v-for="skill in enabledSkills"
                       :key="skill.id"
                       type="button"
                       class="send-skill-chip"
-                      :class="{ active: selectedConversationSkillIds.includes(skill.id) }"
+                      :class="{
+                        active: selectedConversationSkillIds.includes(skill.id),
+                      }"
                       @click="toggleConversationSkill(skill.id)"
                     >
                       {{ skill.name }}
                     </button>
-                    <span v-if="!enabledSkills.length" class="send-skill-empty">暂无可用 Skill</span>
+                    <span v-if="!enabledSkills.length" class="send-skill-empty"
+                      >暂无可用 Skill</span
+                    >
                   </div>
                   <textarea
                     v-model="conversationInput"
@@ -307,12 +401,16 @@
                     </button>
                     <button
                       class="primary-btn"
-                      :disabled="!conversationInput.trim() || conversationSending"
+                      :disabled="
+                        !conversationInput.trim() || conversationSending
+                      "
                       @click="sendMessage"
                     >
-                      {{ conversationSending ? '发送中...' : '发送' }}
+                      {{ conversationSending ? "发送中..." : "发送" }}
                     </button>
-                    <span v-if="conversationError" class="conversation-error">{{ conversationError }}</span>
+                    <span v-if="conversationError" class="conversation-error">{{
+                      conversationError
+                    }}</span>
                     <span v-else>每次发送前都可以调整 LLM、Skill、Agent</span>
                   </div>
                 </div>
@@ -322,7 +420,13 @@
               <div class="section-title">当前对话</div>
               <h2>选择一个历史会话，或新建任务开始</h2>
               <p>左侧是历史会话列表；新建任务会创建一条新的多轮对话。</p>
-              <button class="primary-btn" type="button" @click="showNewTaskPanel = true">新建任务</button>
+              <button
+                class="primary-btn"
+                type="button"
+                @click="showNewTaskPanel = true"
+              >
+                新建任务
+              </button>
             </div>
           </article>
 
@@ -333,18 +437,30 @@
                 <span>状态</span><strong>{{ conversationStatusText }}</strong>
               </div>
               <div class="overview-line">
-                <span>类型</span><strong>{{ selectedTask ? categoryText(selectedTask.category) : '未选择' }}</strong>
+                <span>类型</span
+                ><strong>{{
+                  selectedTask ? categoryText(selectedTask.category) : "未选择"
+                }}</strong>
               </div>
               <label class="side-field">
                 <span>当前会话模型</span>
-                <select v-model="selectedConversationChannelId" :disabled="!selectedTask">
-                  <option v-for="channel in channels" :key="channel.id" :value="channel.id">
+                <select
+                  v-model="selectedConversationChannelId"
+                  :disabled="!selectedTask"
+                >
+                  <option
+                    v-for="channel in channels"
+                    :key="channel.id"
+                    :value="channel.id"
+                  >
                     {{ channelOptionLabel(channel) }}
                   </option>
                 </select>
               </label>
               <div v-if="selectedTask" class="chip-list">
-                <span v-for="kind in selectedTask.outputKinds" :key="kind">{{ outputKindText(kind) }}</span>
+                <span v-for="kind in selectedTask.outputKinds" :key="kind">{{
+                  outputKindText(kind)
+                }}</span>
               </div>
             </section>
 
@@ -365,7 +481,10 @@
               </div>
             </section>
 
-            <section v-if="aiStore.settings.showKnowledgeSnippetPreview" class="card">
+            <section
+              v-if="aiStore.settings.showKnowledgeSnippetPreview"
+              class="card"
+            >
               <div class="knowledge-preview compact side-preview">
                 <div class="knowledge-preview-header">
                   <div>
@@ -375,19 +494,26 @@
                   <button
                     v-if="previewKnowledgeSnippets.length"
                     type="button"
-                    @click="knowledgePreviewExpanded = !knowledgePreviewExpanded"
+                    @click="
+                      knowledgePreviewExpanded = !knowledgePreviewExpanded
+                    "
                   >
-                    {{ knowledgePreviewExpanded ? '收起' : '展开' }}
+                    {{ knowledgePreviewExpanded ? "收起" : "展开" }}
                   </button>
                 </div>
-                <div v-if="previewKnowledgeSnippets.length && knowledgePreviewExpanded" class="knowledge-preview-list">
+                <div
+                  v-if="
+                    previewKnowledgeSnippets.length && knowledgePreviewExpanded
+                  "
+                  class="knowledge-preview-list"
+                >
                   <article
                     v-for="snippet in previewKnowledgeSnippets"
                     :key="snippet.path || snippet.title"
                     class="knowledge-preview-item"
                   >
                     <strong>{{ snippet.title }}</strong>
-                    <small>{{ snippet.path || '无路径' }}</small>
+                    <small>{{ snippet.path || "无路径" }}</small>
                     <p>{{ snippet.content }}</p>
                   </article>
                 </div>
@@ -396,13 +522,28 @@
 
             <section v-if="recentTaskRuns.length" class="card task-run-panel">
               <div class="section-title">
-                任务运行 <span class="suggestion-badge">{{ recentTaskRuns.length }}</span>
+                任务运行
+                <span class="suggestion-badge">{{
+                  recentTaskRuns.length
+                }}</span>
               </div>
-              <div v-for="taskRun in recentTaskRuns" :key="taskRun.id" class="task-run-card">
+              <div
+                v-for="taskRun in recentTaskRuns"
+                :key="taskRun.id"
+                class="task-run-card"
+              >
                 <strong>{{ taskRun.goal }}</strong>
-                <small>意图：{{ taskRun.intent }} / 状态：{{ taskRun.status }}</small>
+                <small
+                  >意图：{{ taskRun.intent }} / 状态：{{
+                    taskRun.status
+                  }}</small
+                >
                 <ol class="task-step-list">
-                  <li v-for="step in taskRun.steps" :key="step.id" :class="`task-step-${step.status}`">
+                  <li
+                    v-for="step in taskRun.steps"
+                    :key="step.id"
+                    :class="`task-step-${step.status}`"
+                  >
                     <span>{{ step.title }}</span>
                     <small>{{ step.status }}</small>
                   </li>
@@ -410,18 +551,29 @@
               </div>
             </section>
 
-            <section v-if="pendingChangePlans.length" class="card permission-request-panel">
+            <section
+              v-if="pendingChangePlans.length"
+              class="card permission-request-panel"
+            >
               <div class="section-title">
-                修改计划 <span class="suggestion-badge">{{ pendingChangePlans.length }}</span>
+                修改计划
+                <span class="suggestion-badge">{{
+                  pendingChangePlans.length
+                }}</span>
               </div>
-              <div v-for="plan in pendingChangePlans" :key="plan.id" class="permission-request-card">
+              <div
+                v-for="plan in pendingChangePlans"
+                :key="plan.id"
+                class="permission-request-card"
+              >
                 <strong>{{ plan.id }}</strong>
-                <p>文件：{{ plan.files.join(', ') }}</p>
-                <small>原因：{{ plan.reasons.join('；') }}</small>
-                <small>依据：{{ plan.evidence.join('；') || '未提供' }}</small>
-                <small>验证：{{ plan.verification.join('；') }}</small>
+                <p>文件：{{ plan.files.join(", ") }}</p>
+                <small>原因：{{ plan.reasons.join("；") }}</small>
+                <small>依据：{{ plan.evidence.join("；") || "未提供" }}</small>
+                <small>验证：{{ plan.verification.join("；") }}</small>
                 <small v-if="plan.writePreview"
-                  >预览工具：{{ plan.writePreview.toolName }} / {{ plan.writePreview.targetPaths.join(', ') }}</small
+                  >预览工具：{{ plan.writePreview.toolName }} /
+                  {{ plan.writePreview.targetPaths.join(", ") }}</small
                 >
                 <pre v-if="plan.writePreview" class="diff-preview"><span
                   v-for="(line, index) in plan.writePreview.preview.split('\n')"
@@ -429,23 +581,46 @@
                   :class="{ added: line.startsWith('+') && !line.startsWith('+++'), removed: line.startsWith('-') && !line.startsWith('---') }"
                 >{{ line }}\n</span></pre>
                 <div class="permission-actions">
-                  <button type="button" @click="approveChangePlan(plan.id)">批准计划</button>
+                  <button type="button" @click="approveChangePlan(plan.id)">
+                    批准计划
+                  </button>
                 </div>
               </div>
             </section>
 
-            <section v-if="pendingPermissionRequests.length" class="card permission-request-panel">
+            <section
+              v-if="pendingPermissionRequests.length"
+              class="card permission-request-panel"
+            >
               <div class="section-title">
-                权限请求 <span class="suggestion-badge">{{ pendingPermissionRequests.length }}</span>
+                权限请求
+                <span class="suggestion-badge">{{
+                  pendingPermissionRequests.length
+                }}</span>
               </div>
-              <div v-for="request in pendingPermissionRequests" :key="request.id" class="permission-request-card">
+              <div
+                v-for="request in pendingPermissionRequests"
+                :key="request.id"
+                class="permission-request-card"
+              >
                 <strong>{{ request.toolName }}</strong>
                 <p>{{ request.message }}</p>
                 <small v-if="request.reason">{{ request.reason }}</small>
                 <pre>{{ request.inputPreview }}</pre>
                 <div class="permission-actions">
-                  <button type="button" @click="allowPermissionOnce(request.id)">允许本次</button>
-                  <button type="button" class="ghost-danger" @click="denyPermissionOnce(request.id)">拒绝</button>
+                  <button
+                    type="button"
+                    @click="allowPermissionOnce(request.id)"
+                  >
+                    允许本次
+                  </button>
+                  <button
+                    type="button"
+                    class="ghost-danger"
+                    @click="denyPermissionOnce(request.id)"
+                  >
+                    拒绝
+                  </button>
                 </div>
               </div>
             </section>
@@ -453,10 +628,18 @@
             <section class="card">
               <div class="section-title">工具审计</div>
               <div v-if="recentToolAuditLogs.length" class="audit-log-list">
-                <div v-for="log in recentToolAuditLogs" :key="log.id" class="audit-log-item" :class="log.behavior">
+                <div
+                  v-for="log in recentToolAuditLogs"
+                  :key="log.id"
+                  class="audit-log-item"
+                  :class="log.behavior"
+                >
                   <strong>{{ log.toolName }}</strong>
-                  <span>{{ log.behavior }} · {{ log.resourceKind }} · {{ log.resource }}</span>
-                  <small>{{ log.reason || '无说明' }}</small>
+                  <span
+                    >{{ log.behavior }} · {{ log.resourceKind }} ·
+                    {{ log.resource }}</span
+                  >
+                  <small>{{ log.reason || "无说明" }}</small>
                 </div>
               </div>
               <p v-else class="muted">暂无工具调用记录。</p>
@@ -465,40 +648,70 @@
             <section v-if="selectedTask" class="card">
               <div class="section-title">沉淀操作</div>
               <div class="output-actions vertical-actions">
-                <button @click="addSuggestion('document')">保存文档到本地</button>
-                <button :disabled="!knowledgeGraphStore.vaultPath" @click="addSuggestion('document', true)">
+                <button @click="addSuggestion('document')">
+                  保存文档到本地
+                </button>
+                <button
+                  :disabled="!knowledgeGraphStore.vaultPath"
+                  @click="addSuggestion('document', true)"
+                >
                   保存到当前知识库
                 </button>
                 <button @click="addSuggestion('todo')">提取待办</button>
                 <button @click="addSuggestion('schedule')">提取日程</button>
-                <button @click="addSuggestion('knowledge')">建议加入知识库</button>
+                <button @click="addSuggestion('knowledge')">
+                  建议加入知识库
+                </button>
               </div>
             </section>
 
-            <section v-if="selectedTaskSuggestions.length" class="card auto-suggestion-panel">
+            <section
+              v-if="selectedTaskSuggestions.length"
+              class="card auto-suggestion-panel"
+            >
               <div class="section-title">
-                沉淀建议 <span class="suggestion-badge">{{ selectedTaskSuggestions.length }} 条</span>
+                沉淀建议
+                <span class="suggestion-badge"
+                  >{{ selectedTaskSuggestions.length }} 条</span
+                >
               </div>
-              <div v-for="item in selectedTaskSuggestions" :key="item.id" class="suggestion-card" :class="item.type">
+              <div
+                v-for="item in selectedTaskSuggestions"
+                :key="item.id"
+                class="suggestion-card"
+                :class="item.type"
+              >
                 <div class="suggestion-header">
-                  <span class="suggestion-type-tag">{{ artifactTypeText(item.type) }}</span>
+                  <span class="suggestion-type-tag">{{
+                    artifactTypeText(item.type)
+                  }}</span>
                   <strong>{{ item.title }}</strong>
                 </div>
                 <p class="suggestion-summary">{{ item.summary }}</p>
-                <p v-if="item.filePath" class="suggestion-summary">文件路径：{{ item.filePath }}</p>
+                <p v-if="item.filePath" class="suggestion-summary">
+                  文件路径：{{ item.filePath }}
+                </p>
                 <div class="suggestion-actions">
-                  <button class="primary-btn suggestion-adopt" @click="adoptSuggestion(item.type)">
+                  <button
+                    class="primary-btn suggestion-adopt"
+                    @click="adoptSuggestion(item.type)"
+                  >
                     {{
-                      item.type === 'todo'
-                        ? '直接提取待办'
-                        : item.type === 'schedule'
-                          ? '直接添加日程'
-                          : item.type === 'document'
-                            ? '保存文档到本地'
-                            : '直接沉淀知识'
+                      item.type === "todo"
+                        ? "直接提取待办"
+                        : item.type === "schedule"
+                          ? "直接添加日程"
+                          : item.type === "document"
+                            ? "保存文档到本地"
+                            : "直接沉淀知识"
                     }}
                   </button>
-                  <button class="suggestion-dismiss" @click="aiStore.removeArtifact(item.id)">忽略</button>
+                  <button
+                    class="suggestion-dismiss"
+                    @click="aiStore.removeArtifact(item.id)"
+                  >
+                    忽略
+                  </button>
                 </div>
               </div>
             </section>
@@ -508,7 +721,8 @@
         <section v-else-if="activeTab === 'tasks'" class="panel-section">
           <div class="table-card">
             <div class="table-row table-head">
-              <span>任务</span><span>状态</span><span>类型</span><span>可能产出</span><span>操作</span>
+              <span>任务</span><span>状态</span><span>类型</span
+              ><span>可能产出</span><span>操作</span>
             </div>
             <div v-for="task in sortedTasks" :key="task.id" class="table-row">
               <button
@@ -520,10 +734,16 @@
               >
                 {{ task.title }}
               </button>
-              <span class="status" :class="task.status">{{ statusText(task.status) }}</span>
+              <span class="status" :class="task.status">{{
+                statusText(task.status)
+              }}</span>
               <span>{{ categoryText(task.category) }}</span>
-              <span>{{ task.outputKinds.map(outputKindText).join('、') || '直接回答' }}</span>
-              <button class="danger" @click="aiStore.deleteTask(task.id)">删除</button>
+              <span>{{
+                task.outputKinds.map(outputKindText).join("、") || "直接回答"
+              }}</span>
+              <button class="danger" @click="aiStore.deleteTask(task.id)">
+                删除
+              </button>
             </div>
           </div>
         </section>
@@ -532,7 +752,10 @@
           <div class="manager-head">
             <div>
               <h2>Skill 管理</h2>
-              <p>Skill 是万能 AI 可调用的能力模板，是否产生文档、日程或知识沉淀由任务判断。</p>
+              <p>
+                Skill 是万能 AI
+                可调用的能力模板，是否产生文档、日程或知识沉淀由任务判断。
+              </p>
             </div>
             <form class="add-form" @submit.prevent="addSkill">
               <input v-model="newSkillName" placeholder="新 Skill 名称" />
@@ -545,7 +768,10 @@
             <div class="settings-grid">
               <div>
                 <span>GitHub 插件地址</span>
-                <input v-model="skillGithubUrl" placeholder="支持仓库、blob、tree 或 raw 地址" />
+                <input
+                  v-model="skillGithubUrl"
+                  placeholder="支持仓库、blob、tree 或 raw 地址"
+                />
               </div>
             </div>
             <div class="composer-actions">
@@ -554,11 +780,15 @@
                 :disabled="!skillGithubUrl.trim() || skillGithubInstalling"
                 @click="installSkillFromGithub"
               >
-                {{ skillGithubInstalling ? '安装中...' : '安装 Skill 插件' }}
+                {{ skillGithubInstalling ? "安装中..." : "安装 Skill 插件" }}
               </button>
               <span
                 v-if="skillGithubMessage"
-                :class="skillGithubMessage.includes('失败') ? 'conversation-error' : ''"
+                :class="
+                  skillGithubMessage.includes('失败')
+                    ? 'conversation-error'
+                    : ''
+                "
                 >{{ skillGithubMessage }}</span
               >
             </div>
@@ -569,7 +799,10 @@
             <div class="settings-grid">
               <div>
                 <span>SkillHub 地址</span>
-                <input v-model="skillSkillHubUrl" placeholder="支持 https 地址或 skillhub:// 地址" />
+                <input
+                  v-model="skillSkillHubUrl"
+                  placeholder="支持 https 地址或 skillhub:// 地址"
+                />
               </div>
             </div>
             <div class="composer-actions">
@@ -578,21 +811,33 @@
                 :disabled="!skillSkillHubUrl.trim() || skillSkillHubInstalling"
                 @click="installSkillFromSkillHub"
               >
-                {{ skillSkillHubInstalling ? '安装中...' : '安装 Skill 插件' }}
+                {{ skillSkillHubInstalling ? "安装中..." : "安装 Skill 插件" }}
               </button>
               <span
                 v-if="skillSkillHubMessage"
-                :class="skillSkillHubMessage.includes('失败') ? 'conversation-error' : ''"
+                :class="
+                  skillSkillHubMessage.includes('失败')
+                    ? 'conversation-error'
+                    : ''
+                "
                 >{{ skillSkillHubMessage }}</span
               >
             </div>
           </div>
           <div class="cards-grid">
-            <article v-for="skill in aiStore.skills" :key="skill.id" class="manage-card">
+            <article
+              v-for="skill in aiStore.skills"
+              :key="skill.id"
+              class="manage-card"
+            >
               <div class="item-heading">
                 <h3>{{ skill.name }}</h3>
                 <label
-                  ><input type="checkbox" :checked="skill.enabled" @change="onSkillToggle(skill.id, $event)" />
+                  ><input
+                    type="checkbox"
+                    :checked="skill.enabled"
+                    @change="onSkillToggle(skill.id, $event)"
+                  />
                   启用</label
                 >
               </div>
@@ -603,7 +848,9 @@
                 <span v-if="skill.outputPolicy.mayCreateDocument">文档</span>
                 <span v-if="skill.outputPolicy.mayCreateTodo">待办</span>
                 <span v-if="skill.outputPolicy.mayCreateSchedule">日程</span>
-                <span v-if="skill.outputPolicy.mayUpdateKnowledgeBase">知识</span>
+                <span v-if="skill.outputPolicy.mayUpdateKnowledgeBase"
+                  >知识</span
+                >
               </div>
             </article>
           </div>
@@ -626,7 +873,10 @@
             <div class="settings-grid">
               <div>
                 <span>GitHub 插件地址</span>
-                <input v-model="agentGithubUrl" placeholder="支持仓库、blob、tree 或 raw 地址" />
+                <input
+                  v-model="agentGithubUrl"
+                  placeholder="支持仓库、blob、tree 或 raw 地址"
+                />
               </div>
             </div>
             <div class="composer-actions">
@@ -635,11 +885,15 @@
                 :disabled="!agentGithubUrl.trim() || agentGithubInstalling"
                 @click="installAgentFromGithub"
               >
-                {{ agentGithubInstalling ? '安装中...' : '安装 Agent 插件' }}
+                {{ agentGithubInstalling ? "安装中..." : "安装 Agent 插件" }}
               </button>
               <span
                 v-if="agentGithubMessage"
-                :class="agentGithubMessage.includes('失败') ? 'conversation-error' : ''"
+                :class="
+                  agentGithubMessage.includes('失败')
+                    ? 'conversation-error'
+                    : ''
+                "
                 >{{ agentGithubMessage }}</span
               >
             </div>
@@ -650,7 +904,10 @@
             <div class="settings-grid">
               <div>
                 <span>SkillHub 地址</span>
-                <input v-model="agentSkillHubUrl" placeholder="支持 https 地址或 skillhub:// 地址" />
+                <input
+                  v-model="agentSkillHubUrl"
+                  placeholder="支持 https 地址或 skillhub:// 地址"
+                />
               </div>
             </div>
             <div class="composer-actions">
@@ -659,21 +916,33 @@
                 :disabled="!agentSkillHubUrl.trim() || agentSkillHubInstalling"
                 @click="installAgentFromSkillHub"
               >
-                {{ agentSkillHubInstalling ? '安装中...' : '安装 Agent 插件' }}
+                {{ agentSkillHubInstalling ? "安装中..." : "安装 Agent 插件" }}
               </button>
               <span
                 v-if="agentSkillHubMessage"
-                :class="agentSkillHubMessage.includes('失败') ? 'conversation-error' : ''"
+                :class="
+                  agentSkillHubMessage.includes('失败')
+                    ? 'conversation-error'
+                    : ''
+                "
                 >{{ agentSkillHubMessage }}</span
               >
             </div>
           </div>
           <div class="cards-grid">
-            <article v-for="agent in aiStore.agents" :key="agent.id" class="manage-card">
+            <article
+              v-for="agent in aiStore.agents"
+              :key="agent.id"
+              class="manage-card"
+            >
               <div class="item-heading">
                 <h3>{{ agent.name }}</h3>
                 <label
-                  ><input type="checkbox" :checked="agent.enabled" @change="onAgentToggle(agent.id, $event)" />
+                  ><input
+                    type="checkbox"
+                    :checked="agent.enabled"
+                    @change="onAgentToggle(agent.id, $event)"
+                  />
                   启用</label
                 >
               </div>
@@ -695,16 +964,26 @@
               <div class="settings-grid">
                 <div>
                   <span>当前渠道</span>
-                  <select :value="aiStore.settings.activeChannelId" @change="onActiveChannelChange">
-                    <option v-for="channel in channels" :key="channel.id" :value="channel.id">
-                      {{ channel.name }}（{{ channel.provider }} / {{ channel.model || '未填写模型' }}）
+                  <select
+                    :value="aiStore.settings.activeChannelId"
+                    @change="onActiveChannelChange"
+                  >
+                    <option
+                      v-for="channel in channels"
+                      :key="channel.id"
+                      :value="channel.id"
+                    >
+                      {{ channel.name }}（{{ channel.provider }} /
+                      {{ channel.model || "未填写模型" }}）
                     </option>
                   </select>
                 </div>
                 <div>
                   <span>当前 API Key 状态</span>
                   <div class="inline-note">
-                    <strong>{{ activeChannel?.apiKeyStored ? '已加密保存' : '未设置' }}</strong>
+                    <strong>{{
+                      activeChannel?.apiKeyStored ? "已加密保存" : "未设置"
+                    }}</strong>
                     <span>不同渠道可独立配置 API Key。</span>
                   </div>
                 </div>
@@ -715,28 +994,43 @@
                       <button
                         type="button"
                         :disabled="
-                          !activeChannel || getChannelTestResult(activeChannel?.id ?? '').status === 'checking'
+                          !activeChannel ||
+                          getChannelTestResult(activeChannel?.id ?? '')
+                            .status === 'checking'
                         "
                         @click="activeChannel && testChannel(activeChannel.id)"
                       >
                         {{
-                          activeChannel && getChannelTestResult(activeChannel.id).status === 'checking'
-                            ? '正在测试...'
-                            : '测试当前渠道'
+                          activeChannel &&
+                          getChannelTestResult(activeChannel.id).status ===
+                            "checking"
+                            ? "正在测试..."
+                            : "测试当前渠道"
                         }}
                       </button>
                     </div>
                     <div
                       class="test-result"
-                      :class="activeChannel ? getChannelTestResult(activeChannel.id).status : 'idle'"
+                      :class="
+                        activeChannel
+                          ? getChannelTestResult(activeChannel.id).status
+                          : 'idle'
+                      "
                     >
-                      <strong>{{ activeChannel ? channelTestTitle(activeChannel.id) : '未测试' }}</strong>
+                      <strong>{{
+                        activeChannel
+                          ? channelTestTitle(activeChannel.id)
+                          : "未测试"
+                      }}</strong>
                       <span>{{
-                        activeChannel ? getChannelTestResult(activeChannel.id).message : '请先配置渠道。'
+                        activeChannel
+                          ? getChannelTestResult(activeChannel.id).message
+                          : "请先配置渠道。"
                       }}</span>
-                      <small v-if="activeChannel && testAdvice(activeChannel.id)">{{
-                        testAdvice(activeChannel.id)
-                      }}</small>
+                      <small
+                        v-if="activeChannel && testAdvice(activeChannel.id)"
+                        >{{ testAdvice(activeChannel.id) }}</small
+                      >
                     </div>
                   </div>
                 </div>
@@ -747,34 +1041,58 @@
               <div class="section-title">LLM 渠道管理</div>
               <div class="table-card">
                 <div class="table-row table-head">
-                  <span>渠道</span><span>模型</span><span>API Key</span><span>操作</span>
+                  <span>渠道</span><span>模型</span><span>API Key</span
+                  ><span>操作</span>
                 </div>
-                <div v-for="channel in channels" :key="channel.id" class="table-row">
+                <div
+                  v-for="channel in channels"
+                  :key="channel.id"
+                  class="table-row"
+                >
                   <div>
-                    <button class="table-title" @click="editChannel(channel)">{{ channel.name }}</button>
+                    <button class="table-title" @click="editChannel(channel)">
+                      {{ channel.name }}
+                    </button>
                     <small
-                      ><span class="provider-tag">{{ providerLabel(channel.provider) }}</span> ·
-                      {{ channel.enabled ? '启用' : '禁用' }}</small
+                      ><span class="provider-tag">{{
+                        providerLabel(channel.provider)
+                      }}</span>
+                      · {{ channel.enabled ? "启用" : "禁用" }}</small
                     >
                   </div>
                   <span
-                    >{{ channel.model || '-' }}<br /><small>{{ channel.baseUrl || '默认 Base URL' }}</small></span
+                    >{{ channel.model || "-" }}<br /><small>{{
+                      channel.baseUrl || "默认 Base URL"
+                    }}</small></span
                   >
                   <span>
-                    <span class="status" :class="getChannelTestResult(channel.id).status">{{
-                      channelTestTitle(channel.id)
-                    }}</span>
+                    <span
+                      class="status"
+                      :class="getChannelTestResult(channel.id).status"
+                      >{{ channelTestTitle(channel.id) }}</span
+                    >
                     <br />
-                    <small>{{ channel.apiKeyStored ? 'API Key 已加密保存' : 'API Key 未设置' }}</small>
+                    <small>{{
+                      channel.apiKeyStored
+                        ? "API Key 已加密保存"
+                        : "API Key 未设置"
+                    }}</small>
                     <br v-if="getChannelTestResult(channel.id).testedAt" />
                     <small v-if="getChannelTestResult(channel.id).testedAt">{{
                       formatTestTime(getChannelTestResult(channel.id).testedAt)
                     }}</small>
                   </span>
                   <div class="row-actions">
-                    <button @click="aiStore.setActiveChannel(channel.id)">设为默认</button>
+                    <button @click="aiStore.setActiveChannel(channel.id)">
+                      设为默认
+                    </button>
                     <button @click="testChannel(channel.id)">测试</button>
-                    <button class="danger" @click="aiStore.deleteChannel(channel.id)">删除</button>
+                    <button
+                      class="danger"
+                      @click="aiStore.deleteChannel(channel.id)"
+                    >
+                      删除
+                    </button>
                   </div>
                 </div>
               </div>
@@ -782,17 +1100,32 @@
               <div class="settings-grid">
                 <div>
                   <span>渠道名称</span>
-                  <input v-model="channelForm.name" placeholder="例如 OpenAI 官方 / 公司代理 / OpenRouter" />
+                  <input
+                    v-model="channelForm.name"
+                    placeholder="例如 OpenAI 官方 / 公司代理 / OpenRouter"
+                  />
                 </div>
                 <div>
                   <span>模型提供商</span>
                   <select v-model="channelForm.provider">
-                    <option v-for="option in providerOptions" :key="option.value" :value="option.value">
+                    <option
+                      v-for="option in providerOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
                       {{ option.label }}
                     </option>
                   </select>
-                  <div v-if="channelForm.provider === 'custom'" class="key-actions" style="margin-top: 6px">
-                    <input v-model="customProviderName" required placeholder="请输入自定义提供商名称" />
+                  <div
+                    v-if="channelForm.provider === 'custom'"
+                    class="key-actions"
+                    style="margin-top: 6px"
+                  >
+                    <input
+                      v-model="customProviderName"
+                      required
+                      placeholder="请输入自定义提供商名称"
+                    />
                   </div>
                 </div>
                 <div>
@@ -804,72 +1137,120 @@
                 </div>
                 <div>
                   <span>Base URL（可选）</span>
-                  <input v-model="channelForm.baseUrl" :placeholder="channelBaseUrlPlaceholder" />
+                  <input
+                    v-model="channelForm.baseUrl"
+                    :placeholder="channelBaseUrlPlaceholder"
+                  />
                   <small>{{ channelBaseUrlHint }}</small>
                 </div>
                 <div>
                   <span>API Key</span>
                   <div class="inline-note">
                     <div class="status-row">
-                      <span class="status-dot" :class="channelForm.apiKeyStored ? 'success' : 'warn'"></span>
+                      <span
+                        class="status-dot"
+                        :class="channelForm.apiKeyStored ? 'success' : 'warn'"
+                      ></span>
                       <strong>{{
-                        channelForm.apiKeyStored ? 'API Key 已加密保存（不可查看）' : 'API Key 未设置'
+                        channelForm.apiKeyStored
+                          ? "API Key 已加密保存（不可查看）"
+                          : "API Key 未设置"
                       }}</strong>
                     </div>
                     <div class="key-actions">
-                      <input v-model="channelSecretInput" type="password" placeholder="保存渠道时将一并加密保存" />
+                      <input
+                        v-model="channelSecretInput"
+                        type="password"
+                        placeholder="保存渠道时将一并加密保存"
+                      />
                     </div>
                     <span>保存渠道后，API Key 会以加密方式存储。</span>
                   </div>
                 </div>
                 <div>
                   <span>启用状态</span>
-                  <label><input type="checkbox" v-model="channelForm.enabled" /> 该渠道可用于选择</label>
+                  <label
+                    ><input type="checkbox" v-model="channelForm.enabled" />
+                    该渠道可用于选择</label
+                  >
                 </div>
                 <div class="key-actions">
                   <button @click="openNewChannelForm()">新增渠道</button>
                   <button class="primary-btn" @click="saveChannelForm()">
-                    {{ channelForm.id ? '更新渠道' : '添加渠道' }}
+                    {{ channelForm.id ? "更新渠道" : "添加渠道" }}
                   </button>
                   <button
                     type="button"
-                    :disabled="!channelForm.id || getChannelTestResult(channelForm.id).status === 'checking'"
+                    :disabled="
+                      !channelForm.id ||
+                      getChannelTestResult(channelForm.id).status === 'checking'
+                    "
                     @click="testCurrentFormChannel()"
                   >
-                    {{ getChannelTestResult(channelForm.id).status === 'checking' ? '正在测试...' : '测试当前渠道' }}
+                    {{
+                      getChannelTestResult(channelForm.id).status === "checking"
+                        ? "正在测试..."
+                        : "测试当前渠道"
+                    }}
                   </button>
                 </div>
 
-                <div v-if="channelForm.id" class="test-result" :class="getChannelTestResult(channelForm.id).status">
+                <div
+                  v-if="channelForm.id"
+                  class="test-result"
+                  :class="getChannelTestResult(channelForm.id).status"
+                >
                   <strong>{{ channelTestTitle(channelForm.id) }}</strong>
-                  <span>{{ getChannelTestResult(channelForm.id).message }}</span>
-                  <small v-if="testAdvice(channelForm.id)">{{ testAdvice(channelForm.id) }}</small>
+                  <span>{{
+                    getChannelTestResult(channelForm.id).message
+                  }}</span>
+                  <small v-if="testAdvice(channelForm.id)">{{
+                    testAdvice(channelForm.id)
+                  }}</small>
                   <small v-if="getChannelTestResult(channelForm.id).testedAt"
-                    >测试时间：{{ formatTestTime(getChannelTestResult(channelForm.id).testedAt) }}</small
+                    >测试时间：{{
+                      formatTestTime(
+                        getChannelTestResult(channelForm.id).testedAt,
+                      )
+                    }}</small
                   >
                   <div
-                    v-if="getChannelTestResult(channelForm.id).status !== 'idle'"
+                    v-if="
+                      getChannelTestResult(channelForm.id).status !== 'idle'
+                    "
                     class="key-actions"
                     style="margin-top: 6px"
                   >
                     <button
                       type="button"
-                      :disabled="getChannelTestResult(channelForm.id).status === 'checking'"
+                      :disabled="
+                        getChannelTestResult(channelForm.id).status ===
+                        'checking'
+                      "
                       @click="testCurrentFormChannel()"
                     >
                       重新测试
                     </button>
                   </div>
 
-                  <div v-if="aiStore.channelHistory(channelForm.id).length" style="margin-top: 8px">
-                    <div class="section-title" style="margin-bottom: 4px">最近测试记录</div>
+                  <div
+                    v-if="aiStore.channelHistory(channelForm.id).length"
+                    style="margin-top: 8px"
+                  >
+                    <div class="section-title" style="margin-bottom: 4px">
+                      最近测试记录
+                    </div>
                     <div
-                      v-for="(item, index) in aiStore.channelHistory(channelForm.id)"
+                      v-for="(item, index) in aiStore.channelHistory(
+                        channelForm.id,
+                      )"
                       :key="index"
                       class="overview-line"
                     >
-                      <span>{{ formatTestTime(item.testedAt) || '-' }}</span>
-                      <strong>{{ item.status === 'success' ? '成功' : '失败' }}</strong>
+                      <span>{{ formatTestTime(item.testedAt) || "-" }}</span>
+                      <strong>{{
+                        item.status === "success" ? "成功" : "失败"
+                      }}</strong>
                       <span>{{ item.message }}</span>
                     </div>
                   </div>
@@ -881,28 +1262,51 @@
               <div class="section-title">任务策略</div>
               <div class="settings-grid">
                 <label
-                  ><input v-model="settings.requireConfirmBeforeWrite" type="checkbox" @change="updateSettingsFromUI" />
+                  ><input
+                    v-model="settings.requireConfirmBeforeWrite"
+                    type="checkbox"
+                    @change="updateSettingsFromUI"
+                  />
                   写入前必须确认</label
                 >
                 <label
-                  ><input v-model="settings.suggestDocuments" type="checkbox" @change="updateSettingsFromUI" />
+                  ><input
+                    v-model="settings.suggestDocuments"
+                    type="checkbox"
+                    @change="updateSettingsFromUI"
+                  />
                   识别到正式内容时建议保存文档</label
                 >
                 <label
-                  ><input v-model="settings.suggestTodos" type="checkbox" @change="updateSettingsFromUI" />
+                  ><input
+                    v-model="settings.suggestTodos"
+                    type="checkbox"
+                    @change="updateSettingsFromUI"
+                  />
                   识别行动项时建议生成待办</label
                 >
                 <label
-                  ><input v-model="settings.suggestSchedules" type="checkbox" @change="updateSettingsFromUI" />
+                  ><input
+                    v-model="settings.suggestSchedules"
+                    type="checkbox"
+                    @change="updateSettingsFromUI"
+                  />
                   识别时间信息时建议加入日程</label
                 >
                 <label
-                  ><input v-model="settings.suggestKnowledge" type="checkbox" @change="updateSettingsFromUI" />
+                  ><input
+                    v-model="settings.suggestKnowledge"
+                    type="checkbox"
+                    @change="updateSettingsFromUI"
+                  />
                   识别长期价值时建议加入知识库</label
                 >
                 <div>
                   <span>默认输出目录</span>
-                  <input v-model="settings.defaultOutputDirectory" @change="updateSettingsFromUI" />
+                  <input
+                    v-model="settings.defaultOutputDirectory"
+                    @change="updateSettingsFromUI"
+                  />
                 </div>
                 <div>
                   <span>AI 文档默认保存路径</span>
@@ -912,9 +1316,14 @@
                       placeholder="留空使用 ~/Documents/workgaga/AI-文档"
                       @change="updateSettingsFromUI"
                     />
-                    <button type="button" @click="chooseAIDocumentSavePath">选择目录</button>
+                    <button type="button" @click="chooseAIDocumentSavePath">
+                      选择目录
+                    </button>
                   </div>
-                  <small>留空时保留默认路径 fallback；保存到当前知识库失败时也会回退到这里。</small>
+                  <small
+                    >留空时保留默认路径
+                    fallback；保存到当前知识库失败时也会回退到这里。</small
+                  >
                 </div>
                 <div>
                   <span>知识库内 AI 文档保存子目录</span>
@@ -923,7 +1332,10 @@
                     placeholder="例如 AI-文档 或 Inbox/AI"
                     @change="updateSettingsFromUI"
                   />
-                  <small>保存到当前知识库时写入该子目录；留空则保持写入知识库根目录的 fallback 行为。</small>
+                  <small
+                    >保存到当前知识库时写入该子目录；留空则保持写入知识库根目录的
+                    fallback 行为。</small
+                  >
                 </div>
                 <label
                   ><input
@@ -979,35 +1391,55 @@
               <p>管理从 GitHub 或 SkillHub 安装的 Skill/Agent 插件。</p>
             </div>
             <div class="add-form">
-              <button type="button" @click="refreshLocalPlugins">刷新本地插件</button>
+              <button type="button" @click="refreshLocalPlugins">
+                刷新本地插件
+              </button>
             </div>
           </div>
 
           <div class="settings-block" style="margin-top: 12px">
             <div class="section-title">已安装 Skill 插件</div>
-            <div v-if="!installedSkillList.length" class="overview-line"><span>暂无已安装 Skill 插件</span></div>
-            <div v-for="item in installedSkillList" :key="item.id" class="overview-line">
+            <div v-if="!installedSkillList.length" class="overview-line">
+              <span>暂无已安装 Skill 插件</span>
+            </div>
+            <div
+              v-for="item in installedSkillList"
+              :key="item.id"
+              class="overview-line"
+            >
               <span
                 >{{ item.name }}<br /><small
-                  >{{ item.version }} · {{ item.sourceType }}{{ item.sourceUrl ? ' · ' + item.sourceUrl : '' }}</small
+                  >{{ item.version }} · {{ item.sourceType
+                  }}{{ item.sourceUrl ? " · " + item.sourceUrl : "" }}</small
                 ></span
               >
               <strong>Skill</strong>
-              <button class="danger" @click="uninstallInstalledPlugin(item.id)">卸载</button>
+              <button class="danger" @click="uninstallInstalledPlugin(item.id)">
+                卸载
+              </button>
             </div>
           </div>
 
           <div class="settings-block" style="margin-top: 12px">
             <div class="section-title">已安装 Agent 插件</div>
-            <div v-if="!installedAgentList.length" class="overview-line"><span>暂无已安装 Agent 插件</span></div>
-            <div v-for="item in installedAgentList" :key="item.id" class="overview-line">
+            <div v-if="!installedAgentList.length" class="overview-line">
+              <span>暂无已安装 Agent 插件</span>
+            </div>
+            <div
+              v-for="item in installedAgentList"
+              :key="item.id"
+              class="overview-line"
+            >
               <span
                 >{{ item.name }}<br /><small
-                  >{{ item.version }} · {{ item.sourceType }}{{ item.sourceUrl ? ' · ' + item.sourceUrl : '' }}</small
+                  >{{ item.version }} · {{ item.sourceType
+                  }}{{ item.sourceUrl ? " · " + item.sourceUrl : "" }}</small
                 ></span
               >
               <strong>Agent</strong>
-              <button class="danger" @click="uninstallInstalledPlugin(item.id)">卸载</button>
+              <button class="danger" @click="uninstallInstalledPlugin(item.id)">
+                卸载
+              </button>
             </div>
           </div>
         </section>
@@ -1061,20 +1493,29 @@
         <section class="card">
           <div class="section-title">当前渠道</div>
           <div class="overview-line">
-            <span>渠道</span><strong>{{ activeChannel?.name ?? '未设置' }}</strong>
+            <span>渠道</span
+            ><strong>{{ activeChannel?.name ?? "未设置" }}</strong>
           </div>
           <div class="overview-line">
-            <span>提供商</span><strong>{{ activeChannel?.provider ?? '-' }}</strong>
+            <span>提供商</span
+            ><strong>{{ activeChannel?.provider ?? "-" }}</strong>
           </div>
           <div class="overview-line">
-            <span>模型</span><strong>{{ activeChannel?.model ?? '-' }}</strong>
+            <span>模型</span><strong>{{ activeChannel?.model ?? "-" }}</strong>
           </div>
           <div class="overview-line">
-            <span>API Key</span><strong>{{ activeChannel?.apiKeyStored ? '已加密保存' : '未设置' }}</strong>
+            <span>API Key</span
+            ><strong>{{
+              activeChannel?.apiKeyStored ? "已加密保存" : "未设置"
+            }}</strong>
           </div>
           <div class="overview-line">
             <span>测试</span
-            ><strong>{{ activeChannel ? getChannelTestResult(activeChannel.id).message : '请先配置渠道。' }}</strong>
+            ><strong>{{
+              activeChannel
+                ? getChannelTestResult(activeChannel.id).message
+                : "请先配置渠道。"
+            }}</strong>
           </div>
         </section>
 
@@ -1088,9 +1529,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
-import { open } from '@tauri-apps/plugin-dialog';
-import { useAIAssistantStore, useDashboardStore, useFileStore, useKnowledgeGraphStore } from '../store';
+import { computed, reactive, ref, watch } from "vue";
+import { open } from "@tauri-apps/plugin-dialog";
+import {
+  useAIAssistantStore,
+  useDashboardStore,
+  useFileStore,
+  useKnowledgeGraphStore,
+} from "../store";
 import type {
   AIAgent,
   AIArtifactType,
@@ -1103,12 +1549,12 @@ import type {
   AISkill,
   AITaskStatus,
   LLModelChannel,
-} from '../store/modal/aiAssistant';
-import { listAIToolAuditLogs } from '../utils/aiRuntime';
-import { notifySuccess, notifyWarning } from '../utils/notifications';
-import { retrieveAIKnowledgeSnippets } from '../utils/aiKnowledgeRetrieval';
-import { getRelativePath } from '../utils/knowledgeGraph';
-import { WINDOW_EVENTS } from '../constants/events';
+} from "../store/modal/aiAssistant";
+import { listAIToolAuditLogs } from "../utils/aiRuntime";
+import { notifySuccess, notifyWarning } from "../utils/notifications";
+import { retrieveAIKnowledgeSnippets } from "../utils/aiKnowledgeRetrieval";
+import { getRelativePath } from "../utils/knowledgeGraph";
+import { WINDOW_EVENTS } from "../constants/events";
 
 const aiStore = useAIAssistantStore();
 const dashboardStore = useDashboardStore();
@@ -1116,132 +1562,143 @@ const fileStore = useFileStore();
 const knowledgeGraphStore = useKnowledgeGraphStore();
 
 const tabs = [
-  { id: 'chat', label: '对话' },
-  { id: 'tasks', label: '任务' },
-  { id: 'skills', label: 'Skill' },
-  { id: 'agents', label: 'Agent' },
-  { id: 'settings', label: '设置' },
-  { id: 'installed', label: '已安装' },
+  { id: "chat", label: "对话" },
+  { id: "tasks", label: "任务" },
+  { id: "skills", label: "Skill" },
+  { id: "agents", label: "Agent" },
+  { id: "settings", label: "设置" },
+  { id: "installed", label: "已安装" },
 ] as const;
 
-type TabId = (typeof tabs)[number]['id'];
+type TabId = (typeof tabs)[number]["id"];
 
-const activeTab = ref<TabId>('chat');
-const userInput = ref('');
+const activeTab = ref<TabId>("chat");
+const userInput = ref("");
 const selectedTaskId = ref<string | null>(null);
 const showNewTaskPanel = ref(false);
-const newSkillName = ref('');
-const newAgentName = ref('');
+const newSkillName = ref("");
+const newAgentName = ref("");
 const settings = reactive({
   ...aiStore.settings,
 });
 
 const providerOptions: { value: AIModelProvider; label: string }[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'gemini', label: 'Gemini' },
-  { value: 'openrouter', label: 'OpenRouter' },
-  { value: 'vercelai_gateway', label: 'Vercel AI Gateway' },
-  { value: 'custom', label: '自定义' },
+  { value: "openai", label: "OpenAI" },
+  { value: "anthropic", label: "Anthropic" },
+  { value: "gemini", label: "Gemini" },
+  { value: "openrouter", label: "OpenRouter" },
+  { value: "vercelai_gateway", label: "Vercel AI Gateway" },
+  { value: "custom", label: "自定义" },
 ];
 
-const customProviderName = ref('');
+const customProviderName = ref("");
 
 const presetProviderValues = new Set(
-  providerOptions.filter((option) => option.value !== 'custom').map((option) => option.value),
+  providerOptions
+    .filter((option) => option.value !== "custom")
+    .map((option) => option.value),
 );
 
 const providerLabel = (provider: string): string => {
   if (presetProviderValues.has(provider as AIModelProvider)) {
-    return providerOptions.find((option) => option.value === provider)?.label ?? provider;
+    return (
+      providerOptions.find((option) => option.value === provider)?.label ??
+      provider
+    );
   }
 
-  return provider === 'custom' ? '自定义' : `自定义: ${provider}`;
+  return provider === "custom" ? "自定义" : `自定义: ${provider}`;
 };
 
 const getProviderBaseUrlExample = (provider: AIModelProvider): string => {
   switch (provider) {
-    case 'anthropic':
-      return '例如 https://api.anthropic.com 或 https://your-proxy.com/v1';
-    case 'gemini':
-      return '例如 https://generativelanguage.googleapis.com 或代理的 /v1beta 地址';
-    case 'openrouter':
-      return '例如 https://openrouter.ai/api 或你的 OpenAI 兼容代理地址';
-    case 'vercelai_gateway':
-      return '例如 https://api.vercel.ai 或你的网关代理地址';
-    case 'custom':
-      return '例如 https://your-domain.com、https://your-domain.com/v1 或完整接口地址';
-    case 'openai':
+    case "anthropic":
+      return "例如 https://api.anthropic.com 或 https://your-proxy.com/v1";
+    case "gemini":
+      return "例如 https://generativelanguage.googleapis.com 或代理的 /v1beta 地址";
+    case "openrouter":
+      return "例如 https://openrouter.ai/api 或你的 OpenAI 兼容代理地址";
+    case "vercelai_gateway":
+      return "例如 https://api.vercel.ai 或你的网关代理地址";
+    case "custom":
+      return "例如 https://your-domain.com、https://your-domain.com/v1 或完整接口地址";
+    case "openai":
     default:
-      return '例如 https://api.openai.com、https://your-proxy.com/v1 或完整接口地址';
+      return "例如 https://api.openai.com、https://your-proxy.com/v1 或完整接口地址";
   }
 };
 
 const getProviderBaseUrlHint = (provider: AIModelProvider): string => {
   switch (provider) {
-    case 'anthropic':
-      return '支持填写根域名、`/v1` 或完整 `/messages` 地址；系统会自动规范化，避免重复拼接。';
-    case 'gemini':
-      return '支持填写根域名、`/v1beta`、`/models/...` 或完整 `:generateContent` 地址；系统会自动补齐 `key` 参数。';
+    case "anthropic":
+      return "支持填写根域名、`/v1` 或完整 `/messages` 地址；系统会自动规范化，避免重复拼接。";
+    case "gemini":
+      return "支持填写根域名、`/v1beta`、`/models/...` 或完整 `:generateContent` 地址；系统会自动补齐 `key` 参数。";
     default:
-      return '支持填写根域名、`/v1` 或完整 `/chat/completions` 地址；测试和真实调用都会自动规范化，不会重复追加 `/v1`。';
+      return "支持填写根域名、`/v1` 或完整 `/chat/completions` 地址；测试和真实调用都会自动规范化，不会重复追加 `/v1`。";
   }
 };
 
-const channelBaseUrlPlaceholder = computed(() => getProviderBaseUrlExample(channelForm.provider));
-const channelBaseUrlHint = computed(() => getProviderBaseUrlHint(channelForm.provider));
+const channelBaseUrlPlaceholder = computed(() =>
+  getProviderBaseUrlExample(channelForm.provider),
+);
+const channelBaseUrlHint = computed(() =>
+  getProviderBaseUrlHint(channelForm.provider),
+);
 
 const formatTestTime = (value: number): string => {
-  if (!value) return '';
+  if (!value) return "";
   try {
     return new Date(value).toLocaleString();
   } catch (error) {
-    return '';
+    return "";
   }
 };
 
 const testAdvice = (channelId: string): string => {
   const result = getChannelTestResult(channelId);
-  if (result.status !== 'error') return '';
+  if (result.status !== "error") return "";
 
   const { message } = result;
-  if (message.includes('认证失败')) {
-    return '建议检查当前渠道 API Key 是否正确、是否过期，以及是否有对应模型的访问权限。';
+  if (message.includes("认证失败")) {
+    return "建议检查当前渠道 API Key 是否正确、是否过期，以及是否有对应模型的访问权限。";
   }
 
-  if (message.includes('未配置 API Key')) {
-    return '建议先在当前渠道中保存 API Key，或确认环境变量配置已生效。';
+  if (message.includes("未配置 API Key")) {
+    return "建议先在当前渠道中保存 API Key，或确认环境变量配置已生效。";
   }
 
-  if (message.includes('未填写模型名称')) {
-    return '建议先填写模型名称，再执行测试。';
+  if (message.includes("未填写模型名称")) {
+    return "建议先填写模型名称，再执行测试。";
   }
 
-  if (message.includes('异常状态码')) {
-    return '建议核对模型名称、Base URL、渠道类型是否匹配，并确认该服务端支持当前请求格式。';
+  if (message.includes("异常状态码")) {
+    return "建议核对模型名称、Base URL、渠道类型是否匹配，并确认该服务端支持当前请求格式。";
   }
 
-  if (message.includes('无法连接')) {
-    return '建议检查网络连通性、代理设置、Base URL 是否可达，以及是否存在 CSP/跨域限制。';
+  if (message.includes("无法连接")) {
+    return "建议检查网络连通性、代理设置、Base URL 是否可达，以及是否存在 CSP/跨域限制。";
   }
 
-  return '建议检查 Base URL、网络连通性、模型名称与 API Key 是否匹配。';
+  return "建议检查 Base URL、网络连通性、模型名称与 API Key 是否匹配。";
 };
 
 const channelForm = reactive<LLModelChannel>(createDefaultChannelForm());
-const channelSecretInput = ref('');
+const channelSecretInput = ref("");
 const channels = computed(() => aiStore.settings.llmChannels);
 const activeChannel = computed(() => aiStore.activeChannel);
-const selectedDirectChannelId = ref('');
-const selectedConversationChannelId = ref('');
-const selectedConversationAgentId = ref('');
+const selectedDirectChannelId = ref("");
+const selectedConversationChannelId = ref("");
+const selectedConversationAgentId = ref("");
 const selectedConversationSkillIds = ref<string[]>([]);
 const auditRefreshKey = ref(0);
 
 const pendingPermissionRequests = computed(() =>
   aiStore.pendingPermissionRequests.filter((request) => !request.resolvedAt),
 );
-const pendingChangePlans = computed(() => aiStore.changePlans.filter((plan) => !plan.approved));
+const pendingChangePlans = computed(() =>
+  aiStore.changePlans.filter((plan) => !plan.approved),
+);
 const recentTaskRuns = computed(() => aiStore.taskRuns.slice(0, 3));
 
 const recentToolAuditLogs = computed(() => {
@@ -1254,11 +1711,11 @@ const approveChangePlan = (id: string): void => {
 };
 
 const allowPermissionOnce = (id: string): void => {
-  aiStore.resolvePermissionRequest(id, 'allow-once');
+  aiStore.resolvePermissionRequest(id, "allow-once");
 };
 
 const denyPermissionOnce = (id: string): void => {
-  aiStore.resolvePermissionRequest(id, 'deny-once');
+  aiStore.resolvePermissionRequest(id, "deny-once");
 };
 
 const stopCurrentRuns = (): void => {
@@ -1266,46 +1723,52 @@ const stopCurrentRuns = (): void => {
   conversationSending.value = false;
 };
 
-const toolEventTypeText = (type: AIMessageToolEvent['type']): string =>
+const toolEventTypeText = (type: AIMessageToolEvent["type"]): string =>
   ({
-    start: '开始',
-    progress: '进度',
-    result: '完成',
-    error: '失败',
+    start: "开始",
+    progress: "进度",
+    result: "完成",
+    error: "失败",
   })[type];
 
 const channelOptionLabel = (channel: LLModelChannel): string => {
   const provider = providerLabel(channel.provider);
-  const model = channel.model || '未填写模型';
-  return `${channel.name}（${provider} / ${model}${channel.enabled ? '' : ' / 已禁用'}）`;
+  const model = channel.model || "未填写模型";
+  return `${channel.name}（${provider} / ${model}${channel.enabled ? "" : " / 已禁用"}）`;
 };
 
 const getChannelTestResult = (channelId: string): AIChannelTestResult =>
-  aiStore.channelTestResults[channelId] || { status: 'idle', message: '尚未测试该渠道。', testedAt: 0 };
+  aiStore.channelTestResults[channelId] || {
+    status: "idle",
+    message: "尚未测试该渠道。",
+    testedAt: 0,
+  };
 
 const channelTestTitle = (channelId: string): string =>
   ({
-    idle: '未测试',
-    checking: '检测中',
-    success: '校验通过',
-    error: '校验未通过',
+    idle: "未测试",
+    checking: "检测中",
+    success: "校验通过",
+    error: "校验未通过",
   })[getChannelTestResult(channelId).status];
 
 const openNewChannelForm = (): void => {
   Object.assign(channelForm, createDefaultChannelForm());
-  channelSecretInput.value = '';
+  channelSecretInput.value = "";
 };
 
 const editChannel = (channel: LLModelChannel): void => {
-  const isPreset = providerOptions.some((option) => option.value === channel.provider);
+  const isPreset = providerOptions.some(
+    (option) => option.value === channel.provider,
+  );
 
   Object.assign(channelForm, {
     ...channel,
-    provider: isPreset ? channel.provider : 'custom',
+    provider: isPreset ? channel.provider : "custom",
   });
 
-  customProviderName.value = isPreset ? '' : channel.provider;
-  channelSecretInput.value = '';
+  customProviderName.value = isPreset ? "" : channel.provider;
+  channelSecretInput.value = "";
 };
 
 const saveChannelForm = async (): Promise<string | null> => {
@@ -1313,12 +1776,14 @@ const saveChannelForm = async (): Promise<string | null> => {
   const trimmedModel = channelForm.model.trim();
   if (!trimmedName || !trimmedModel) return channelForm.id || null;
 
-  if (channelForm.provider === 'custom' && !customProviderName.value.trim()) {
+  if (channelForm.provider === "custom" && !customProviderName.value.trim()) {
     return channelForm.id || null;
   }
 
   const resolvedProvider =
-    channelForm.provider === 'custom' ? customProviderName.value.trim() || 'custom' : channelForm.provider;
+    channelForm.provider === "custom"
+      ? customProviderName.value.trim() || "custom"
+      : channelForm.provider;
 
   if (channelForm.id) {
     aiStore.updateChannel(channelForm.id, {
@@ -1343,10 +1808,13 @@ const saveChannelForm = async (): Promise<string | null> => {
   }
 
   if (channelForm.id && channelSecretInput.value.trim()) {
-    await aiStore.setChannelApiKey(channelForm.id, channelSecretInput.value.trim());
+    await aiStore.setChannelApiKey(
+      channelForm.id,
+      channelSecretInput.value.trim(),
+    );
   }
 
-  channelSecretInput.value = '';
+  channelSecretInput.value = "";
   return channelForm.id || null;
 };
 
@@ -1367,11 +1835,11 @@ const onActiveChannelChange = (event: Event): void => {
 
 function createDefaultChannelForm(): LLModelChannel {
   return {
-    id: '',
-    name: '新渠道',
-    provider: 'openai',
-    model: '',
-    baseUrl: '',
+    id: "",
+    name: "新渠道",
+    provider: "openai",
+    model: "",
+    baseUrl: "",
     enabled: true,
     apiKeyStored: false,
     apiKeyStoredAt: 0,
@@ -1380,24 +1848,38 @@ function createDefaultChannelForm(): LLModelChannel {
   };
 }
 
-const quickActions = ['规划事项', '生成文档', '提取行动项', '整理产出', '研究分析'];
+const quickActions = [
+  "规划事项",
+  "生成文档",
+  "提取行动项",
+  "整理产出",
+  "研究分析",
+];
 const enabledSkills = computed(() => aiStore.enabledSkills);
 const enabledAgents = computed(() => aiStore.enabledAgents);
 const sortedTasks = computed(() => aiStore.sortedTasks);
 const taskCounts = computed(() => aiStore.taskCounts);
-const selectedTask = computed(() => aiStore.tasks.find((task) => task.id === selectedTaskId.value) || null);
-const currentFileName = computed(() => fileStore.currentFilePath?.split(/[\\/]/).pop() || '未打开');
-const activeTasks = computed(() =>
-  sortedTasks.value.filter((task) => task.status === 'pending' || task.status === 'running').slice(0, 6),
+const selectedTask = computed(
+  () => aiStore.tasks.find((task) => task.id === selectedTaskId.value) || null,
 );
-const conversationInput = ref('');
+const currentFileName = computed(
+  () => fileStore.currentFilePath?.split(/[\\/]/).pop() || "未打开",
+);
+const activeTasks = computed(() =>
+  sortedTasks.value
+    .filter((task) => task.status === "pending" || task.status === "running")
+    .slice(0, 6),
+);
+const conversationInput = ref("");
 const conversationSending = ref(false);
-const conversationError = ref('');
+const conversationError = ref("");
 
 const selectedSendSkillIds = ref<string[]>([]);
 const sendingDirectly = ref(false);
-const directSendError = ref('');
-const knowledgePreviewExpanded = ref(aiStore.settings.autoExpandKnowledgeSnippetPreview);
+const directSendError = ref("");
+const knowledgePreviewExpanded = ref(
+  aiStore.settings.autoExpandKnowledgeSnippetPreview,
+);
 
 watch(
   () => aiStore.settings.autoExpandKnowledgeSnippetPreview,
@@ -1406,7 +1888,10 @@ watch(
   },
 );
 
-const toggleSkillSelection = (selection: typeof selectedSendSkillIds, skillId: string): void => {
+const toggleSkillSelection = (
+  selection: typeof selectedSendSkillIds,
+  skillId: string,
+): void => {
   const index = selection.value.indexOf(skillId);
   if (index >= 0) {
     selection.value = selection.value.filter((id) => id !== skillId);
@@ -1415,38 +1900,53 @@ const toggleSkillSelection = (selection: typeof selectedSendSkillIds, skillId: s
   }
 };
 
-const toggleSendSkill = (skillId: string): void => toggleSkillSelection(selectedSendSkillIds, skillId);
-const toggleConversationSkill = (skillId: string): void => toggleSkillSelection(selectedConversationSkillIds, skillId);
+const toggleSendSkill = (skillId: string): void =>
+  toggleSkillSelection(selectedSendSkillIds, skillId);
+const toggleConversationSkill = (skillId: string): void =>
+  toggleSkillSelection(selectedConversationSkillIds, skillId);
 
 const retrieveKnowledgeSnippets = (input: string) => {
   if (!aiStore.settings.enableKnowledgeSnippetInjection) return [];
-  return retrieveAIKnowledgeSnippets(input, knowledgeGraphStore.graphData?.notes ?? [], {
-    currentFilePath: fileStore.currentFilePath,
-    recentFilePaths: fileStore.sortedRecentFiles.map((file) => file.path),
-    maxSnippets: aiStore.settings.maxKnowledgeSnippets,
-  });
+  return retrieveAIKnowledgeSnippets(
+    input,
+    knowledgeGraphStore.graphData?.notes ?? [],
+    {
+      currentFilePath: fileStore.currentFilePath,
+      recentFilePaths: fileStore.sortedRecentFiles.map((file) => file.path),
+      maxSnippets: aiStore.settings.maxKnowledgeSnippets,
+      graphData: knowledgeGraphStore.graphData,
+      includeGraphNeighbors: true,
+      graphNeighborBoost: 2,
+    },
+  );
 };
 
-const buildContextSnapshot = (input = ''): AIContextSnapshot => ({
+const buildContextSnapshot = (input = ""): AIContextSnapshot => ({
   currentFileName: fileStore.currentFilePath?.split(/[\\/]/).pop() || undefined,
   vaultName: knowledgeGraphStore.vaultName || undefined,
   vaultPath: knowledgeGraphStore.vaultPath || undefined,
   noteCount: knowledgeGraphStore.noteCount || undefined,
   knowledgeSnippets:
-    input.trim() && aiStore.settings.enableKnowledgeSnippetInjection ? retrieveKnowledgeSnippets(input) : [],
+    input.trim() && aiStore.settings.enableKnowledgeSnippetInjection
+      ? retrieveKnowledgeSnippets(input)
+      : [],
 });
 
 const selectTask = (taskId: string): void => {
   selectedTaskId.value = taskId;
-  conversationError.value = '';
-  directSendError.value = '';
+  conversationError.value = "";
+  directSendError.value = "";
   showNewTaskPanel.value = false;
 };
 
 watch(
   sortedTasks,
   (tasks) => {
-    if (selectedTaskId.value && tasks.some((task) => task.id === selectedTaskId.value)) return;
+    if (
+      selectedTaskId.value &&
+      tasks.some((task) => task.id === selectedTaskId.value)
+    )
+      return;
     selectedTaskId.value = tasks[0]?.id ?? null;
     showNewTaskPanel.value = tasks.length === 0;
   },
@@ -1458,7 +1958,7 @@ const sendDirectPrompt = async (): Promise<void> => {
   if (!trimmed) return;
 
   sendingDirectly.value = true;
-  directSendError.value = '';
+  directSendError.value = "";
   try {
     const task = await aiStore.sendPromptDirect(
       trimmed,
@@ -1473,19 +1973,22 @@ const sendDirectPrompt = async (): Promise<void> => {
       const latestAssistantMessage = task.conversationId
         ? [...aiStore.conversationMessages(task.conversationId)]
             .reverse()
-            .find((message) => message.role === 'assistant')
+            .find((message) => message.role === "assistant")
         : null;
 
-      if (latestAssistantMessage?.status === 'failed') {
-        directSendError.value = latestAssistantMessage.content || '发送失败，请检查渠道配置或网络后重试。';
+      if (latestAssistantMessage?.status === "failed") {
+        directSendError.value =
+          latestAssistantMessage.content ||
+          "发送失败，请检查渠道配置或网络后重试。";
         return;
       }
     }
-    userInput.value = '';
+    userInput.value = "";
     selectedSendSkillIds.value = [];
     showNewTaskPanel.value = false;
   } catch (error) {
-    directSendError.value = error instanceof Error ? error.message : '发送失败，请稍后重试。';
+    directSendError.value =
+      error instanceof Error ? error.message : "发送失败，请稍后重试。";
   } finally {
     sendingDirectly.value = false;
   }
@@ -1499,17 +2002,21 @@ const selectedConversation = computed(() => {
 watch(
   () => aiStore.activeChannel?.id,
   (channelId) => {
-    const fallbackChannelId = channelId || channels.value[0]?.id || '';
+    const fallbackChannelId = channelId || channels.value[0]?.id || "";
     if (
       !selectedDirectChannelId.value ||
-      !channels.value.some((channel) => channel.id === selectedDirectChannelId.value)
+      !channels.value.some(
+        (channel) => channel.id === selectedDirectChannelId.value,
+      )
     ) {
       selectedDirectChannelId.value = fallbackChannelId;
     }
     if (
       !selectedConversation.value &&
       (!selectedConversationChannelId.value ||
-        !channels.value.some((channel) => channel.id === selectedConversationChannelId.value))
+        !channels.value.some(
+          (channel) => channel.id === selectedConversationChannelId.value,
+        ))
     ) {
       selectedConversationChannelId.value = fallbackChannelId;
     }
@@ -1521,9 +2028,14 @@ watch(
   () => selectedTask.value?.id,
   () => {
     selectedConversationChannelId.value =
-      selectedConversation.value?.channelId || aiStore.activeChannel?.id || channels.value[0]?.id || '';
-    selectedConversationAgentId.value = selectedTask.value?.agentId || '';
-    selectedConversationSkillIds.value = [...(selectedTask.value?.skillIds ?? [])];
+      selectedConversation.value?.channelId ||
+      aiStore.activeChannel?.id ||
+      channels.value[0]?.id ||
+      "";
+    selectedConversationAgentId.value = selectedTask.value?.agentId || "";
+    selectedConversationSkillIds.value = [
+      ...(selectedTask.value?.skillIds ?? []),
+    ];
   },
   { immediate: true },
 );
@@ -1532,7 +2044,10 @@ watch(
   () => selectedConversation.value?.id,
   () => {
     selectedConversationChannelId.value =
-      selectedConversation.value?.channelId || aiStore.activeChannel?.id || channels.value[0]?.id || '';
+      selectedConversation.value?.channelId ||
+      aiStore.activeChannel?.id ||
+      channels.value[0]?.id ||
+      "";
   },
   { immediate: true },
 );
@@ -1550,14 +2065,14 @@ watch(selectedConversationChannelId, (channelId) => {
 
 const conversationStatusText = computed(() => {
   const status = selectedConversation.value?.status;
-  if (!status) return '未创建对话';
+  if (!status) return "未创建对话";
   return (
     {
-      active: '对话进行中',
-      paused: '对话已暂停',
-      completed: '对话已完成',
-      failed: '对话已失败',
-    }[status] ?? '未知状态'
+      active: "对话进行中",
+      paused: "对话已暂停",
+      completed: "对话已完成",
+      failed: "对话已失败",
+    }[status] ?? "未知状态"
   );
 });
 
@@ -1572,8 +2087,8 @@ const conversationKeepRecent = 8;
 const conversationSummaryStatus = computed(() => {
   const convId = selectedTask.value?.conversationId;
   if (!convId) return null;
-  if (aiStore.summaryGenerating[convId]) return 'generating';
-  if (aiStore.conversationSummaries[convId]) return 'ready';
+  if (aiStore.summaryGenerating[convId]) return "generating";
+  if (aiStore.conversationSummaries[convId]) return "ready";
   return null;
 });
 
@@ -1588,7 +2103,9 @@ const ensureConversationId = (): string | null => {
 
   if (!selectedTask.value.conversationId) {
     const channel =
-      channels.value.find((item) => item.id === selectedConversationChannelId.value) || aiStore.activeChannel;
+      channels.value.find(
+        (item) => item.id === selectedConversationChannelId.value,
+      ) || aiStore.activeChannel;
     const conversation = aiStore.createConversation({
       taskId: selectedTask.value.id,
       title: selectedTask.value.title,
@@ -1598,7 +2115,8 @@ const ensureConversationId = (): string | null => {
     });
 
     selectedTask.value.conversationId = conversation.id;
-    selectedConversationChannelId.value = conversation.channelId || channel?.id || '';
+    selectedConversationChannelId.value =
+      conversation.channelId || channel?.id || "";
   }
 
   return selectedTask.value.conversationId ?? null;
@@ -1611,27 +2129,33 @@ const sendMessage = async (): Promise<void> => {
   if (!conversationId) return;
 
   conversationSending.value = true;
-  conversationError.value = '';
+  conversationError.value = "";
 
   aiStore.updateTask(selectedTask.value.id, {
-    status: 'running',
-    progressText: '正在准备与 AI 协作...',
+    status: "running",
+    progressText: "正在准备与 AI 协作...",
   });
 
   try {
-    const message = await aiStore.sendConversationMessage(conversationId, conversationInput.value, {
-      agentId: selectedConversationAgentId.value || undefined,
-      channelId: selectedConversationChannelId.value || undefined,
-      userSelectedSkillIds: selectedConversationSkillIds.value,
-      contextSnapshot: buildContextSnapshot(conversationInput.value),
-    });
-    if (message?.status === 'failed') {
-      conversationError.value = message.content || '发送失败，请检查渠道配置或网络后重试。';
+    const message = await aiStore.sendConversationMessage(
+      conversationId,
+      conversationInput.value,
+      {
+        agentId: selectedConversationAgentId.value || undefined,
+        channelId: selectedConversationChannelId.value || undefined,
+        userSelectedSkillIds: selectedConversationSkillIds.value,
+        contextSnapshot: buildContextSnapshot(conversationInput.value),
+      },
+    );
+    if (message?.status === "failed") {
+      conversationError.value =
+        message.content || "发送失败，请检查渠道配置或网络后重试。";
       return;
     }
-    conversationInput.value = '';
+    conversationInput.value = "";
   } catch (error) {
-    conversationError.value = error instanceof Error ? error.message : '发送失败，请稍后重试。';
+    conversationError.value =
+      error instanceof Error ? error.message : "发送失败，请稍后重试。";
   } finally {
     conversationSending.value = false;
     auditRefreshKey.value += 1;
@@ -1641,22 +2165,30 @@ const sendMessage = async (): Promise<void> => {
 const retryAssistantMessage = (messageId: string): void => {
   if (!selectedTask.value?.conversationId) return;
 
-  const messages = aiStore.conversationMessages(selectedTask.value.conversationId);
+  const messages = aiStore.conversationMessages(
+    selectedTask.value.conversationId,
+  );
   const target = messages.find((item) => item.id === messageId);
-  if (!target || target.role !== 'assistant' || target.status !== 'failed') return;
+  if (!target || target.role !== "assistant" || target.status !== "failed")
+    return;
 
   const lastUserMessage = [...messages]
     .reverse()
-    .find((item) => item.role === 'user' && item.createdAt <= target.createdAt);
+    .find((item) => item.role === "user" && item.createdAt <= target.createdAt);
   if (lastUserMessage) {
     conversationInput.value = lastUserMessage.content;
     sendMessage();
   }
 };
 
-const selectedTaskSuggestions = computed(() => aiStore.taskArtifacts(selectedTask.value?.conversationId));
+const selectedTaskSuggestions = computed(() =>
+  aiStore.taskArtifacts(selectedTask.value?.conversationId),
+);
 
-const appendKnowledgeContextLinks = (markdownContent: string, docTitle: string): string => {
+const appendKnowledgeContextLinks = (
+  markdownContent: string,
+  docTitle: string,
+): string => {
   const links: string[] = [];
 
   if (selectedTask.value?.title) {
@@ -1666,12 +2198,15 @@ const appendKnowledgeContextLinks = (markdownContent: string, docTitle: string):
   }
 
   if (fileStore.currentFilePath && knowledgeGraphStore.vaultPath) {
-    const relativePath = getRelativePath(knowledgeGraphStore.vaultPath, fileStore.currentFilePath);
+    const relativePath = getRelativePath(
+      knowledgeGraphStore.vaultPath,
+      fileStore.currentFilePath,
+    );
     const currentTitle =
       relativePath
         .split(/[\\/]/)
         .pop()
-        ?.replace(/\.(md|markdown)$/i, '') || relativePath;
+        ?.replace(/\.(md|markdown)$/i, "") || relativePath;
     links.push(`- 关联文件：[[${currentTitle}]]（${relativePath}）`);
   } else if (fileStore.currentFilePath) {
     links.push(`- 关联文件：${fileStore.currentFilePath}`);
@@ -1685,19 +2220,25 @@ const appendKnowledgeContextLinks = (markdownContent: string, docTitle: string):
         snippet
           .path!.split(/[\\/]/)
           .pop()
-          ?.replace(/\.(md|markdown)$/i, '') || snippet.title;
+          ?.replace(/\.(md|markdown)$/i, "") || snippet.title;
       return `- 上下文片段：[[${title}]]（${snippet.path}）`;
     });
 
   links.push(...snippetLinks);
   if (!links.length) return markdownContent;
 
-  return `${markdownContent}\n\n## 来源与关联\n\n${Array.from(new Set(links)).join('\n')}`;
+  return `${markdownContent}\n\n## 来源与关联\n\n${Array.from(new Set(links)).join("\n")}`;
 };
 
 const activateSavedDocument = (filePath: string): void => {
-  window.dispatchEvent(new CustomEvent(WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR, { detail: { path: filePath } }));
-  window.dispatchEvent(new CustomEvent('switch-main-view', { detail: { view: 'editor' } }));
+  window.dispatchEvent(
+    new CustomEvent(WINDOW_EVENTS.OPEN_DOCUMENT_IN_EDITOR, {
+      detail: { path: filePath },
+    }),
+  );
+  window.dispatchEvent(
+    new CustomEvent("switch-main-view", { detail: { view: "editor" } }),
+  );
 };
 
 const saveDocumentArtifact = async (
@@ -1706,7 +2247,10 @@ const saveDocumentArtifact = async (
   markdownContent: string,
   preferVault = false,
 ): Promise<void> => {
-  const enrichedContent = appendKnowledgeContextLinks(markdownContent, docTitle);
+  const enrichedContent = appendKnowledgeContextLinks(
+    markdownContent,
+    docTitle,
+  );
   const result = await aiStore.saveDocumentToLocal(docTitle, enrichedContent, {
     preferVault: preferVault || aiStore.settings.saveDocumentsToCurrentVault,
     vaultPath: knowledgeGraphStore.vaultPath,
@@ -1715,14 +2259,20 @@ const saveDocumentArtifact = async (
   if (result.success) {
     aiStore.addArtifact({
       conversationId,
-      type: 'document',
+      type: "document",
       title: `文档：${docTitle}`,
-      summary: result.usedFallback ? `已保存到默认 AI 文档路径：${result.filePath}` : `已保存到：${result.filePath}`,
+      summary: result.usedFallback
+        ? `已保存到默认 AI 文档路径：${result.filePath}`
+        : `已保存到：${result.filePath}`,
       filePath: result.filePath,
     });
     if (result.filePath) {
       fileStore.setCurrentFilePath(result.filePath);
-      fileStore.addRecentFile(result.filePath, knowledgeGraphStore.vaultPath, knowledgeGraphStore.vaultName || null);
+      fileStore.addRecentFile(
+        result.filePath,
+        knowledgeGraphStore.vaultPath,
+        knowledgeGraphStore.vaultName || null,
+      );
       fileStore.markSaved(result.filePath);
       activateSavedDocument(result.filePath);
       if (knowledgeGraphStore.vaultPath && !result.usedFallback) {
@@ -1735,7 +2285,9 @@ const saveDocumentArtifact = async (
         : `文档已保存到知识库、打开并刷新索引：${result.filePath}`,
     );
   } else {
-    notifyWarning(`本地保存失败（${result.error}），已改为保存为内部建议记录。`);
+    notifyWarning(
+      `本地保存失败（${result.error}），已改为保存为内部建议记录。`,
+    );
   }
 };
 
@@ -1745,21 +2297,28 @@ const addSuggestion = (type: AIArtifactType, preferVault = false): void => {
   const conversationId = ensureConversationId();
   if (!conversationId) return;
 
-  if (type === 'document') {
+  if (type === "document") {
     const lastContent =
-      conversationMessages.value.filter((m) => m.role === 'assistant' && m.status === 'completed').pop()?.content || '';
+      conversationMessages.value
+        .filter((m) => m.role === "assistant" && m.status === "completed")
+        .pop()?.content || "";
 
     if (lastContent.length > 50) {
-      const docTitle = selectedTask.value.title || '未命名文档';
+      const docTitle = selectedTask.value.title || "未命名文档";
       const markdownContent = `# ${docTitle}\n\n${lastContent}\n\n---\n*由 workgaga AI 生成，时间：${new Date().toLocaleString()}*`;
 
-      saveDocumentArtifact(conversationId, docTitle, markdownContent, preferVault).catch(() => {
-        notifyWarning('本地保存异常，已改为保存为内部记录。');
+      saveDocumentArtifact(
+        conversationId,
+        docTitle,
+        markdownContent,
+        preferVault,
+      ).catch(() => {
+        notifyWarning("本地保存异常，已改为保存为内部记录。");
       });
     }
   }
 
-  if (type !== 'document') {
+  if (type !== "document") {
     aiStore.addArtifact({
       conversationId,
       type,
@@ -1771,15 +2330,15 @@ const addSuggestion = (type: AIArtifactType, preferVault = false): void => {
 
 const artifactTypeText = (type: AIArtifactType): string =>
   ({
-    document: '文档建议',
-    todo: '待办建议',
-    schedule: '日程建议',
-    knowledge: '知识沉淀建议',
+    document: "文档建议",
+    todo: "待办建议",
+    schedule: "日程建议",
+    knowledge: "知识沉淀建议",
   })[type];
 
 const useQuickAction = (action: string): void => {
   userInput.value = `帮我${action}`;
-  activeTab.value = 'chat';
+  activeTab.value = "chat";
 };
 
 const onSkillToggle = (id: string, event: Event): void => {
@@ -1799,9 +2358,9 @@ const addSkill = (): void => {
   if (!name) return;
   aiStore.addSkill({
     name,
-    description: '用户自定义 Skill。',
+    description: "用户自定义 Skill。",
     whenToUse: `当用户需要 ${name} 时使用。`,
-    category: 'general',
+    category: "general",
     promptTemplate: `使用 ${name} 能力帮助用户完成目标。先理解任务，再判断是否需要文档、待办、日程或知识沉淀。`,
     enabled: true,
     userInvocable: true,
@@ -1811,8 +2370,8 @@ const addSkill = (): void => {
       mayCreateSchedule: true,
       mayUpdateKnowledgeBase: true,
     },
-  } satisfies Omit<AISkill, 'id' | 'builtin' | 'createdAt' | 'updatedAt'>);
-  newSkillName.value = '';
+  } satisfies Omit<AISkill, "id" | "builtin" | "createdAt" | "updatedAt">);
+  newSkillName.value = "";
 };
 
 const addAgent = (): void => {
@@ -1820,39 +2379,55 @@ const addAgent = (): void => {
   if (!name) return;
   aiStore.addAgent({
     name,
-    description: '用户自定义 Agent。',
+    description: "用户自定义 Agent。",
     whenToUse: `当任务适合由 ${name} 专门处理时使用。`,
     systemPrompt: `你是 ${name}。你是 workgaga 万能 AI 背后的专业执行者，必须服务于用户目标，不要把知识库或日程作为默认主线。`,
     enabled: true,
-    allowedSkills: aiStore.skills.filter((skill) => skill.enabled).map((skill) => skill.id),
-    allowedTools: ['read-context', 'write-document', 'manage-task', 'manage-schedule', 'use-knowledge'],
-    permissionMode: 'ask',
-    memoryScope: 'workspace',
-    runMode: 'foreground',
-  } satisfies Omit<AIAgent, 'id' | 'builtin' | 'usageCount' | 'createdAt' | 'updatedAt'>);
-  newAgentName.value = '';
+    allowedSkills: aiStore.skills
+      .filter((skill) => skill.enabled)
+      .map((skill) => skill.id),
+    allowedTools: [
+      "read-context",
+      "write-document",
+      "manage-task",
+      "manage-schedule",
+      "use-knowledge",
+    ],
+    permissionMode: "ask",
+    memoryScope: "workspace",
+    runMode: "foreground",
+  } satisfies Omit<
+    AIAgent,
+    "id" | "builtin" | "usageCount" | "createdAt" | "updatedAt"
+  >);
+  newAgentName.value = "";
 };
 
-const skillGithubUrl = ref('');
+const skillGithubUrl = ref("");
 const skillGithubInstalling = ref(false);
-const skillGithubMessage = ref('');
+const skillGithubMessage = ref("");
 
-const agentGithubUrl = ref('');
+const agentGithubUrl = ref("");
 const agentGithubInstalling = ref(false);
-const agentGithubMessage = ref('');
+const agentGithubMessage = ref("");
 
 const installSkillFromGithub = async (): Promise<void> => {
   if (!skillGithubUrl.value.trim()) return;
 
   skillGithubInstalling.value = true;
-  skillGithubMessage.value = '';
+  skillGithubMessage.value = "";
 
   try {
-    const manifest = await aiStore.installPluginFromGitHub(skillGithubUrl.value);
+    const manifest = await aiStore.installPluginFromGitHub(
+      skillGithubUrl.value,
+    );
     skillGithubMessage.value = `已安装 Skill 插件：${manifest.name}(${manifest.version})`;
-    skillGithubUrl.value = '';
+    skillGithubUrl.value = "";
   } catch (error) {
-    skillGithubMessage.value = error instanceof Error ? `安装失败：${error.message}` : '安装失败，请稍后重试。';
+    skillGithubMessage.value =
+      error instanceof Error
+        ? `安装失败：${error.message}`
+        : "安装失败，请稍后重试。";
   } finally {
     skillGithubInstalling.value = false;
   }
@@ -1862,39 +2437,49 @@ const installAgentFromGithub = async (): Promise<void> => {
   if (!agentGithubUrl.value.trim()) return;
 
   agentGithubInstalling.value = true;
-  agentGithubMessage.value = '';
+  agentGithubMessage.value = "";
 
   try {
-    const manifest = await aiStore.installPluginFromGitHub(agentGithubUrl.value);
+    const manifest = await aiStore.installPluginFromGitHub(
+      agentGithubUrl.value,
+    );
     agentGithubMessage.value = `已安装 Agent 插件：${manifest.name}(${manifest.version})`;
-    agentGithubUrl.value = '';
+    agentGithubUrl.value = "";
   } catch (error) {
-    agentGithubMessage.value = error instanceof Error ? `安装失败：${error.message}` : '安装失败，请稍后重试。';
+    agentGithubMessage.value =
+      error instanceof Error
+        ? `安装失败：${error.message}`
+        : "安装失败，请稍后重试。";
   } finally {
     agentGithubInstalling.value = false;
   }
 };
 
-const skillSkillHubUrl = ref('');
+const skillSkillHubUrl = ref("");
 const skillSkillHubInstalling = ref(false);
-const skillSkillHubMessage = ref('');
+const skillSkillHubMessage = ref("");
 
-const agentSkillHubUrl = ref('');
+const agentSkillHubUrl = ref("");
 const agentSkillHubInstalling = ref(false);
-const agentSkillHubMessage = ref('');
+const agentSkillHubMessage = ref("");
 
 const installSkillFromSkillHub = async (): Promise<void> => {
   if (!skillSkillHubUrl.value.trim()) return;
 
   skillSkillHubInstalling.value = true;
-  skillSkillHubMessage.value = '';
+  skillSkillHubMessage.value = "";
 
   try {
-    const manifest = await aiStore.installPluginFromSkillHub(skillSkillHubUrl.value);
+    const manifest = await aiStore.installPluginFromSkillHub(
+      skillSkillHubUrl.value,
+    );
     skillSkillHubMessage.value = `已安装 Skill 插件：${manifest.name}(${manifest.version})`;
-    skillSkillHubUrl.value = '';
+    skillSkillHubUrl.value = "";
   } catch (error) {
-    skillSkillHubMessage.value = error instanceof Error ? `安装失败：${error.message}` : '安装失败，请稍后重试。';
+    skillSkillHubMessage.value =
+      error instanceof Error
+        ? `安装失败：${error.message}`
+        : "安装失败，请稍后重试。";
   } finally {
     skillSkillHubInstalling.value = false;
   }
@@ -1904,21 +2489,30 @@ const installAgentFromSkillHub = async (): Promise<void> => {
   if (!agentSkillHubUrl.value.trim()) return;
 
   agentSkillHubInstalling.value = true;
-  agentSkillHubMessage.value = '';
+  agentSkillHubMessage.value = "";
 
   try {
-    const manifest = await aiStore.installPluginFromSkillHub(agentSkillHubUrl.value);
+    const manifest = await aiStore.installPluginFromSkillHub(
+      agentSkillHubUrl.value,
+    );
     agentSkillHubMessage.value = `已安装 Agent 插件：${manifest.name}(${manifest.version})`;
-    agentSkillHubUrl.value = '';
+    agentSkillHubUrl.value = "";
   } catch (error) {
-    agentSkillHubMessage.value = error instanceof Error ? `安装失败：${error.message}` : '安装失败，请稍后重试。';
+    agentSkillHubMessage.value =
+      error instanceof Error
+        ? `安装失败：${error.message}`
+        : "安装失败，请稍后重试。";
   } finally {
     agentSkillHubInstalling.value = false;
   }
 };
 
-const installedSkillList = computed(() => Object.values(aiStore.installedSkillPlugins));
-const installedAgentList = computed(() => Object.values(aiStore.installedAgentPlugins));
+const installedSkillList = computed(() =>
+  Object.values(aiStore.installedSkillPlugins),
+);
+const installedAgentList = computed(() =>
+  Object.values(aiStore.installedAgentPlugins),
+);
 
 const refreshLocalPlugins = async (): Promise<void> => {
   await aiStore.loadLocalPlugins();
@@ -1949,34 +2543,36 @@ const chooseAIDocumentSavePath = async (): Promise<void> => {
 
 const statusText = (status: AITaskStatus): string =>
   ({
-    pending: '待处理',
-    running: '进行中',
-    completed: '已完成',
-    failed: '失败',
-    cancelled: '已取消',
+    pending: "待处理",
+    running: "进行中",
+    completed: "已完成",
+    failed: "失败",
+    cancelled: "已取消",
   })[status];
 
 const categoryText = (category: AICategory): string =>
   ({
-    general: '通用',
-    writing: '写作',
-    research: '研究',
-    planning: '规划',
-    organizing: '整理',
-    automation: '自动化',
+    general: "通用",
+    writing: "写作",
+    research: "研究",
+    planning: "规划",
+    organizing: "整理",
+    automation: "自动化",
   })[category];
 
 const outputKindText = (kind: AIOutputKind): string =>
   ({
-    document: '文档',
-    todo: '待办',
-    schedule: '日程',
-    knowledge: '知识',
+    document: "文档",
+    todo: "待办",
+    schedule: "日程",
+    knowledge: "知识",
   })[kind];
 
 const activeAgent = computed(() => {
   if (!selectedTask.value?.agentId) return null;
-  return aiStore.agents.find((a) => a.id === selectedTask.value!.agentId) ?? null;
+  return (
+    aiStore.agents.find((a) => a.id === selectedTask.value!.agentId) ?? null
+  );
 });
 
 const selectedSkillNames = computed(() => {
@@ -1986,89 +2582,109 @@ const selectedSkillNames = computed(() => {
     .filter((name): name is string => Boolean(name));
 });
 
-const currentDraftInput = computed(() => conversationInput.value.trim() || userInput.value.trim());
+const currentDraftInput = computed(
+  () => conversationInput.value.trim() || userInput.value.trim(),
+);
 const previewKnowledgeSnippets = computed(() =>
   currentDraftInput.value && aiStore.settings.showKnowledgeSnippetPreview
     ? retrieveKnowledgeSnippets(currentDraftInput.value)
     : [],
 );
-const previewKnowledgeSnippetCount = computed(() => previewKnowledgeSnippets.value.length);
+const previewKnowledgeSnippetCount = computed(
+  () => previewKnowledgeSnippets.value.length,
+);
 const knowledgeSnippetPreviewText = computed(() => {
-  if (!aiStore.settings.enableKnowledgeSnippetInjection) return '已关闭知识片段注入';
-  if (!currentDraftInput.value) return '输入后自动检索';
+  if (!aiStore.settings.enableKnowledgeSnippetInjection)
+    return "已关闭知识片段注入";
+  if (!currentDraftInput.value) return "输入后自动检索";
   return `已检索 ${previewKnowledgeSnippets.value.length} 个`;
 });
 
 const contextSummaryItems = computed(() => {
-  const items: { label: string; value: string; kind: string; action?: () => void }[] = [];
+  const items: {
+    label: string;
+    value: string;
+    kind: string;
+    action?: () => void;
+  }[] = [];
 
   if (activeAgent.value) {
     items.push({
-      label: 'Agent',
+      label: "Agent",
       value: activeAgent.value.name,
-      kind: 'agent',
+      kind: "agent",
       action: () => {
-        activeTab.value = 'agents';
+        activeTab.value = "agents";
       },
     });
   }
 
   if (selectedSkillNames.value.length > 0) {
     items.push({
-      label: 'Skill',
-      value: selectedSkillNames.value.join('、'),
-      kind: 'skill',
+      label: "Skill",
+      value: selectedSkillNames.value.join("、"),
+      kind: "skill",
       action: () => {
-        activeTab.value = 'skills';
+        activeTab.value = "skills";
       },
     });
   }
 
   const fileName = currentFileName.value;
-  if (fileName && fileName !== '未打开') {
+  if (fileName && fileName !== "未打开") {
     items.push({
-      label: '文件',
+      label: "文件",
       value: fileName,
-      kind: 'file',
+      kind: "file",
     });
   }
 
   const { vaultName } = knowledgeGraphStore;
   if (vaultName) {
     items.push({
-      label: '知识库',
+      label: "知识库",
       value: `${vaultName}（${knowledgeGraphStore.noteCount} 篇）`,
-      kind: 'knowledge',
+      kind: "knowledge",
       action: () => {
-        window.dispatchEvent(new CustomEvent('switch-main-view', { detail: { view: 'editor' } }));
+        window.dispatchEvent(
+          new CustomEvent("switch-main-view", { detail: { view: "editor" } }),
+        );
       },
     });
     items.push({
-      label: '知识片段',
-      value: currentDraftInput.value ? `将注入 ${previewKnowledgeSnippetCount.value} 个` : '输入后自动检索',
-      kind: 'knowledge',
+      label: "知识片段",
+      value: currentDraftInput.value
+        ? `将注入 ${previewKnowledgeSnippetCount.value} 个`
+        : "输入后自动检索",
+      kind: "knowledge",
     });
   } else {
     items.push({
-      label: '知识库',
-      value: '未打开',
-      kind: 'knowledge',
+      label: "知识库",
+      value: "未打开",
+      kind: "knowledge",
       action: () => {
-        notifyWarning('请在左侧文件管理器中打开知识库目录，系统会自动索引其中的 Markdown 文档。');
-        window.dispatchEvent(new CustomEvent('switch-main-view', { detail: { view: 'editor' } }));
+        notifyWarning(
+          "请在左侧文件管理器中打开知识库目录，系统会自动索引其中的 Markdown 文档。",
+        );
+        window.dispatchEvent(
+          new CustomEvent("switch-main-view", { detail: { view: "editor" } }),
+        );
       },
     });
   }
 
   if (selectedTask.value) {
     const category = categoryText(selectedTask.value.category);
-    const outputKinds = selectedTask.value.outputKinds.map(outputKindText).join('、') || '直接回答';
+    const outputKinds =
+      selectedTask.value.outputKinds.map(outputKindText).join("、") ||
+      "直接回答";
     items.push({
-      label: '类型',
+      label: "类型",
       value: `${category} · ${outputKinds}`,
-      kind: 'task',
+      kind: "task",
       action: () => {
-        activeTab.value = 'tasks';
+        activeTab.value = "tasks";
       },
     });
   }
@@ -2076,11 +2692,12 @@ const contextSummaryItems = computed(() => {
   return items;
 });
 
-const ACTION_SIGNAL = /需要|完成|准备|跟进|安排|处理|确认|检查|提交|发送|联系|更新/;
+const ACTION_SIGNAL =
+  /需要|完成|准备|跟进|安排|处理|确认|检查|提交|发送|联系|更新/;
 
 const extractTodoItemsFromContent = (content: string): string[] => {
   const items: string[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   for (const line of lines) {
     const trimmed = line.trim();
@@ -2097,7 +2714,11 @@ const extractTodoItemsFromContent = (content: string): string[] => {
     }
 
     const bulletMatch = trimmed.match(/^[-*]\s+(.+)/);
-    if (bulletMatch && ACTION_SIGNAL.test(bulletMatch[1]) && bulletMatch[1].length > 6) {
+    if (
+      bulletMatch &&
+      ACTION_SIGNAL.test(bulletMatch[1]) &&
+      bulletMatch[1].length > 6
+    ) {
       items.push(bulletMatch[1].trim());
     }
   }
@@ -2105,9 +2726,11 @@ const extractTodoItemsFromContent = (content: string): string[] => {
   return items.slice(0, 20);
 };
 
-const extractScheduleItemsFromContent = (content: string): { title: string; date?: string; time?: string }[] => {
+const extractScheduleItemsFromContent = (
+  content: string,
+): { title: string; date?: string; time?: string }[] => {
   const items: { title: string; date?: string; time?: string }[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   const today = new Date();
   const dateMap: Record<string, () => string> = {
@@ -2146,7 +2769,7 @@ const extractScheduleItemsFromContent = (content: string): { title: string; date
 
     const dateMatch = trimmed.match(dateRegex);
     if (dateMatch) {
-      detectedDate = dateMatch[1].replace(/\//g, '-');
+      detectedDate = dateMatch[1].replace(/\//g, "-");
     } else {
       for (const [keyword, formatter] of Object.entries(dateMap)) {
         if (trimmed.includes(keyword)) {
@@ -2158,23 +2781,27 @@ const extractScheduleItemsFromContent = (content: string): { title: string; date
 
     const timeMatch = trimmed.match(timeRegex);
     if (timeMatch) {
-      detectedTime = timeMatch[1].replace(/[点]/g, ':').replace(/[：]/g, ':');
-      if (detectedTime.indexOf(':') === -1) {
-        detectedTime = detectedTime.replace(/(\d+).*/, '$1:00');
+      detectedTime = timeMatch[1].replace(/[点]/g, ":").replace(/[：]/g, ":");
+      if (detectedTime.indexOf(":") === -1) {
+        detectedTime = detectedTime.replace(/(\d+).*/, "$1:00");
       }
     }
 
     if (detectedDate || detectedTime) {
       const titleText = trimmed
-        .replace(dateRegex, '')
-        .replace(timeRegex, '')
-        .replace(/^[-*]\s*\[[ x]\]\s*/, '')
-        .replace(/^[-*]\s+/, '')
-        .replace(/^\d+[.)]\s*/, '')
+        .replace(dateRegex, "")
+        .replace(timeRegex, "")
+        .replace(/^[-*]\s*\[[ x]\]\s*/, "")
+        .replace(/^[-*]\s+/, "")
+        .replace(/^\d+[.)]\s*/, "")
         .trim();
 
       if (titleText.length > 2) {
-        items.push({ title: titleText.slice(0, 80), date: detectedDate, time: detectedTime });
+        items.push({
+          title: titleText.slice(0, 80),
+          date: detectedDate,
+          time: detectedTime,
+        });
       }
     }
   }
@@ -2184,30 +2811,38 @@ const extractScheduleItemsFromContent = (content: string): { title: string; date
 
 const formatDateKey = (date: Date): string => {
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 
 const adoptSuggestion = (type: AIArtifactType): void => {
-  const artifact = selectedTaskSuggestions.value.find((item) => item.type === type);
+  const artifact = selectedTaskSuggestions.value.find(
+    (item) => item.type === type,
+  );
   if (!artifact) return;
 
   const lastAssistantContent =
-    conversationMessages.value.filter((m) => m.role === 'assistant' && m.status === 'completed').pop()?.content || '';
+    conversationMessages.value
+      .filter((m) => m.role === "assistant" && m.status === "completed")
+      .pop()?.content || "";
 
   const task = selectedTask.value;
   let directAdopted = false;
 
-  if (type === 'document' && lastAssistantContent.length > 50) {
-    const docTitle = task?.title || '未命名文档';
+  if (type === "document" && lastAssistantContent.length > 50) {
+    const docTitle = task?.title || "未命名文档";
     const markdownContent = `# ${docTitle}\n\n${lastAssistantContent}\n\n---\n*由 workgaga AI 生成，时间：${new Date().toLocaleString()}*`;
 
-    saveDocumentArtifact(artifact.conversationId, docTitle, markdownContent).catch(() => {
-      notifyWarning('本地保存异常，已改为保存为内部建议记录。');
+    saveDocumentArtifact(
+      artifact.conversationId,
+      docTitle,
+      markdownContent,
+    ).catch(() => {
+      notifyWarning("本地保存异常，已改为保存为内部建议记录。");
     });
     directAdopted = true;
-  } else if (type === 'todo' && lastAssistantContent.length > 20) {
+  } else if (type === "todo" && lastAssistantContent.length > 20) {
     const todoItems = extractTodoItemsFromContent(lastAssistantContent);
     if (todoItems.length > 0) {
       const today = formatDateKey(new Date());
@@ -2216,42 +2851,49 @@ const adoptSuggestion = (type: AIArtifactType): void => {
       }
       directAdopted = true;
     }
-  } else if (type === 'schedule' && lastAssistantContent.length > 20) {
+  } else if (type === "schedule" && lastAssistantContent.length > 20) {
     const scheduleItems = extractScheduleItemsFromContent(lastAssistantContent);
     if (scheduleItems.length > 0) {
       for (const item of scheduleItems) {
-        dashboardStore.addSchedule(item.title, item.date || formatDateKey(new Date()), item.time);
+        dashboardStore.addSchedule(
+          item.title,
+          item.date || formatDateKey(new Date()),
+          item.time,
+        );
       }
       directAdopted = true;
     }
-  } else if (type === 'knowledge' && lastAssistantContent.length > 50) {
+  } else if (type === "knowledge" && lastAssistantContent.length > 50) {
     const keyPoints = lastAssistantContent
-      .split('\n')
+      .split("\n")
       .filter((l) => l.trim().length > 4)
       .slice(0, 10)
-      .join('\n');
+      .join("\n");
 
     aiStore.addArtifact({
       conversationId: artifact.conversationId,
-      type: 'knowledge',
-      title: `知识沉淀：${task?.title || '未命名'}`,
-      summary: keyPoints.slice(0, 300) || '从对话中提取的知识沉淀。',
+      type: "knowledge",
+      title: `知识沉淀：${task?.title || "未命名"}`,
+      summary: keyPoints.slice(0, 300) || "从对话中提取的知识沉淀。",
     });
     directAdopted = true;
   }
 
   if (!directAdopted) {
-    if (type === 'document') {
+    if (type === "document") {
       conversationInput.value = `请将本次对话内容整理成一份完整的 Markdown 文档，标题为"${task?.title}"，包含所有关键信息、结论和下一步。`;
       sendMessage();
-    } else if (type === 'todo') {
-      conversationInput.value = '请从本次对话中提取所有待办事项，格式为：[ ] 任务描述（负责人/截止时间）。';
+    } else if (type === "todo") {
+      conversationInput.value =
+        "请从本次对话中提取所有待办事项，格式为：[ ] 任务描述（负责人/截止时间）。";
       sendMessage();
-    } else if (type === 'schedule') {
-      conversationInput.value = '请从本次对话中提取所有与时间相关的事项，整理成日程条目，包含日期、时间和描述。';
+    } else if (type === "schedule") {
+      conversationInput.value =
+        "请从本次对话中提取所有与时间相关的事项，整理成日程条目，包含日期、时间和描述。";
       sendMessage();
-    } else if (type === 'knowledge') {
-      conversationInput.value = '请将本次对话中的关键结论、方法论或经验总结整理为知识沉淀格式，包含标题、标签和摘要。';
+    } else if (type === "knowledge") {
+      conversationInput.value =
+        "请将本次对话中的关键结论、方法论或经验总结整理为知识沉淀格式，包含标题、标签和摘要。";
       sendMessage();
     }
   }
@@ -3188,7 +3830,7 @@ input[required]:invalid {
   gap: 8px;
 }
 
-.settings-grid input[type='checkbox'] {
+.settings-grid input[type="checkbox"] {
   width: auto;
 }
 

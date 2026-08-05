@@ -1,26 +1,39 @@
-import { defineStore } from 'pinia';
-import type { KnowledgeGraphData, KnowledgeVault } from '../../components/types';
-import { extractFileName } from '../../components/fileUtils';
-import { indexKnowledgeVault } from '../../utils/knowledgeGraph';
+import { defineStore } from "pinia";
+import type {
+  KnowledgeGraphData,
+  KnowledgeVault,
+} from "../../components/types";
+import type { KnowledgeFileSnapshot } from "../../utils/knowledgeGraph";
+import { extractFileName } from "../../components/fileUtils";
+import {
+  indexKnowledgeVault,
+  mergeKnowledgeGraphData,
+} from "../../utils/knowledgeGraph";
 
 interface KnowledgeGraphState {
   vaultPath: string | null;
   vaults: KnowledgeVault[];
   graphData: KnowledgeGraphData | null;
   loading: boolean;
+  refreshPending: boolean;
   error: string | null;
   lastIndexedAt: number | null;
+  fileSnapshots: KnowledgeFileSnapshot[];
+  graphByVault: Record<string, KnowledgeGraphData>;
+  scanWarnings: string[];
 }
 
 const STORAGE_KEYS = {
-  VAULT_PATH: 'cherry_markdown_knowledge_vault_path',
-  VAULTS: 'cherry_markdown_knowledge_vaults',
-  LAST_INDEXED_AT: 'cherry_markdown_knowledge_last_indexed_at',
+  VAULT_PATH: "cherry_markdown_knowledge_vault_path",
+  VAULTS: "cherry_markdown_knowledge_vaults",
+  LAST_INDEXED_AT: "cherry_markdown_knowledge_last_indexed_at",
 };
 
-const getKnowledgeBaseName = (path: string): string => extractFileName(path.replace(/[\\/]+$/, '')) || path;
+const getKnowledgeBaseName = (path: string): string =>
+  extractFileName(path.replace(/[\\/]+$/, "")) || path;
 
-const normalizePath = (path: string): string => path.replace(/\\/g, '/').replace(/\/+$/, '');
+const normalizePath = (path: string): string =>
+  path.replace(/\\/g, "/").replace(/\/+$/, "");
 
 const loadVaultPath = (): string | null => {
   try {
@@ -37,14 +50,20 @@ const loadVaults = (): KnowledgeVault[] => {
     const parsed = JSON.parse(saved);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .filter((item) => item && typeof item.path === 'string')
+      .filter((item) => item && typeof item.path === "string")
       .map((item) => ({
         path: item.path,
-        name: typeof item.name === 'string' && item.name ? item.name : getKnowledgeBaseName(item.path),
-        lastIndexedAt: typeof item.lastIndexedAt === 'number' ? item.lastIndexedAt : undefined,
+        name:
+          typeof item.name === "string" && item.name
+            ? item.name
+            : getKnowledgeBaseName(item.path),
+        lastIndexedAt:
+          typeof item.lastIndexedAt === "number"
+            ? item.lastIndexedAt
+            : undefined,
       }));
   } catch (error) {
-    console.warn('加载知识库列表失败:', error);
+    console.warn("加载知识库列表失败:", error);
     return [];
   }
 };
@@ -66,7 +85,7 @@ const saveVaultPath = (path: string | null): void => {
       localStorage.removeItem(STORAGE_KEYS.VAULT_PATH);
     }
   } catch (error) {
-    console.warn('保存知识库路径失败:', error);
+    console.warn("保存知识库路径失败:", error);
   }
 };
 
@@ -74,7 +93,7 @@ const saveVaults = (vaults: KnowledgeVault[]): void => {
   try {
     localStorage.setItem(STORAGE_KEYS.VAULTS, JSON.stringify(vaults));
   } catch (error) {
-    console.warn('保存知识库列表失败:', error);
+    console.warn("保存知识库列表失败:", error);
   }
 };
 
@@ -86,7 +105,7 @@ const saveLastIndexedAt = (time: number | null): void => {
       localStorage.removeItem(STORAGE_KEYS.LAST_INDEXED_AT);
     }
   } catch (error) {
-    console.warn('保存知识库索引时间失败:', error);
+    console.warn("保存知识库索引时间失败:", error);
   }
 };
 
@@ -95,42 +114,65 @@ const createInitialVaults = (): KnowledgeVault[] => {
   const currentPath = loadVaultPath();
   if (!currentPath) return vaults;
 
-  const exists = vaults.some((vault) => normalizePath(vault.path) === normalizePath(currentPath));
-  return exists ? vaults : [{ path: currentPath, name: getKnowledgeBaseName(currentPath) }, ...vaults];
+  const exists = vaults.some(
+    (vault) => normalizePath(vault.path) === normalizePath(currentPath),
+  );
+  return exists
+    ? vaults
+    : [
+        { path: currentPath, name: getKnowledgeBaseName(currentPath) },
+        ...vaults,
+      ];
 };
 
-export const useKnowledgeGraphStore = defineStore('knowledgeGraph', {
+export const useKnowledgeGraphStore = defineStore("knowledgeGraph", {
   state: (): KnowledgeGraphState => ({
     vaultPath: loadVaultPath(),
     vaults: createInitialVaults(),
     graphData: null,
     loading: false,
+    refreshPending: false,
     error: null,
     lastIndexedAt: loadLastIndexedAt(),
+    fileSnapshots: [],
+    graphByVault: {},
+    scanWarnings: [],
   }),
 
   getters: {
-    vaultName: (state) => (state.vaultPath ? getKnowledgeBaseName(state.vaultPath) : ''),
+    vaultName: (state) =>
+      state.vaultPath ? getKnowledgeBaseName(state.vaultPath) : "",
     currentVault: (state) =>
-      state.vaults.find((vault) => state.vaultPath && normalizePath(vault.path) === normalizePath(state.vaultPath)) || null,
+      state.vaults.find(
+        (vault) =>
+          state.vaultPath &&
+          normalizePath(vault.path) === normalizePath(state.vaultPath),
+      ) || null,
     knowledgeBaseForPath: (state) => (filePath: string) => {
       const normalizedFilePath = normalizePath(filePath);
       return (
         state.vaults.find((vault) => {
           const normalizedVaultPath = normalizePath(vault.path);
-          return normalizedFilePath === normalizedVaultPath || normalizedFilePath.startsWith(`${normalizedVaultPath}/`);
+          return (
+            normalizedFilePath === normalizedVaultPath ||
+            normalizedFilePath.startsWith(`${normalizedVaultPath}/`)
+          );
         }) || null
       );
     },
-    noteCount: (state) => state.graphData?.nodes.filter((node) => node.exists).length || 0,
-    missingCount: (state) => state.graphData?.nodes.filter((node) => !node.exists).length || 0,
+    noteCount: (state) =>
+      state.graphData?.nodes.filter((node) => node.exists).length || 0,
+    missingCount: (state) =>
+      state.graphData?.nodes.filter((node) => !node.exists).length || 0,
     linkCount: (state) => state.graphData?.links.length || 0,
   },
 
   actions: {
     upsertKnowledgeBase(path: string, lastIndexedAt?: number) {
       const normalizedPath = normalizePath(path);
-      const existingIndex = this.vaults.findIndex((vault) => normalizePath(vault.path) === normalizedPath);
+      const existingIndex = this.vaults.findIndex(
+        (vault) => normalizePath(vault.path) === normalizedPath,
+      );
       const vault = {
         path,
         name: getKnowledgeBaseName(path),
@@ -138,7 +180,10 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', {
       };
 
       if (existingIndex >= 0) {
-        this.vaults[existingIndex] = { ...this.vaults[existingIndex], ...vault };
+        this.vaults[existingIndex] = {
+          ...this.vaults[existingIndex],
+          ...vault,
+        };
       } else {
         this.vaults.unshift(vault);
       }
@@ -148,10 +193,15 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', {
 
     async setVault(path: string | null) {
       const previousIndexedAt = path
-        ? this.vaults.find((vault) => normalizePath(vault.path) === normalizePath(path))?.lastIndexedAt
+        ? this.vaults.find(
+            (vault) => normalizePath(vault.path) === normalizePath(path),
+          )?.lastIndexedAt
         : undefined;
       this.vaultPath = path;
       this.graphData = null;
+      this.fileSnapshots = [];
+      this.graphByVault = {};
+      this.scanWarnings = [];
       this.error = null;
       this.lastIndexedAt = previousIndexedAt ?? null;
       saveVaultPath(path);
@@ -165,21 +215,72 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', {
     },
 
     async indexVault() {
-      if (!this.vaultPath || this.loading) return;
+      if (!this.vaultPath) return;
+      if (this.loading) {
+        this.refreshPending = true;
+        return;
+      }
 
       this.loading = true;
+      this.refreshPending = false;
       this.error = null;
 
       try {
-        const graphData = await indexKnowledgeVault(this.vaultPath);
+        const vaultsToIndex = this.vaults.length
+          ? this.vaults
+          : [
+              {
+                path: this.vaultPath,
+                name: getKnowledgeBaseName(this.vaultPath),
+              },
+            ];
+        const results = await Promise.allSettled(
+          vaultsToIndex.map(async (vault) => ({
+            vaultPath: vault.path,
+            graph: await indexKnowledgeVault(vault.path),
+          })),
+        );
+        const successfulGraphs = results.flatMap((result) =>
+          result.status === "fulfilled" ? [result.value] : [],
+        );
+        const warnings = results.flatMap((result, index) =>
+          result.status === "rejected"
+            ? [`${vaultsToIndex[index].path}: ${String(result.reason)}`]
+            : [],
+        );
+        if (!successfulGraphs.length) {
+          throw new Error("所有知识库均未能完成索引");
+        }
+        const graphData = mergeKnowledgeGraphData(successfulGraphs);
+        graphData.indexStats = {
+          ...graphData.indexStats!,
+          warnings: [...graphData.indexStats!.warnings, ...warnings],
+          failedFiles: graphData.indexStats!.failedFiles + warnings.length,
+        };
         this.graphData = graphData;
+        this.graphByVault = Object.fromEntries(
+          successfulGraphs.map(({ vaultPath, graph }) => [vaultPath, graph]),
+        );
+        this.scanWarnings = graphData.indexStats.warnings;
         this.lastIndexedAt = graphData.indexedAt;
-        this.upsertKnowledgeBase(this.vaultPath, graphData.indexedAt);
+        this.fileSnapshots = (graphData.notes || []).map((note) => ({
+          path: note.path,
+          relativePath: note.relativePath,
+          size: note.size || 0,
+          mtime: note.mtime ?? null,
+        }));
+        successfulGraphs.forEach(({ vaultPath, graph }) =>
+          this.upsertKnowledgeBase(vaultPath, graph.indexedAt),
+        );
         saveLastIndexedAt(graphData.indexedAt);
       } catch (error) {
         this.error = error instanceof Error ? error.message : String(error);
       } finally {
         this.loading = false;
+        if (this.refreshPending) {
+          this.refreshPending = false;
+          await this.indexVault();
+        }
       }
     },
 
@@ -201,7 +302,9 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', {
 
     removeKnowledgeBase(path: string) {
       const normalizedPath = normalizePath(path);
-      this.vaults = this.vaults.filter((vault) => normalizePath(vault.path) !== normalizedPath);
+      this.vaults = this.vaults.filter(
+        (vault) => normalizePath(vault.path) !== normalizedPath,
+      );
       saveVaults(this.vaults);
       if (this.vaultPath && normalizePath(this.vaultPath) === normalizedPath) {
         this.clear();
@@ -211,6 +314,9 @@ export const useKnowledgeGraphStore = defineStore('knowledgeGraph', {
     clear() {
       this.vaultPath = null;
       this.graphData = null;
+      this.fileSnapshots = [];
+      this.graphByVault = {};
+      this.scanWarnings = [];
       this.error = null;
       this.lastIndexedAt = null;
       saveVaultPath(null);
